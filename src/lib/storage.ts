@@ -11,7 +11,7 @@ import {
   AppUser,
 } from '../types';
 import { generateRandomPin, sha256, verifyPin } from './security';
-import { getSupabase, isSupabaseActive, setupRealtimeSubscription, getSupabaseConfig, testSupabaseConnection } from './supabase';
+import { getSupabase, isSupabaseActive, setupRealtimeSubscription, getSupabaseConfig, testSupabaseConnection, fetchServerSupabaseConfig } from './supabase';
 
 const STORAGE_KEYS = {
   SCHOOL: 'epilketos_school_v1',
@@ -392,9 +392,13 @@ function setItem<T>(key: string, val: T): void {
 }
 
 // Sinkronisasi data dari Supabase PostgreSQL ke local cache
-export async function syncFromSupabase(): Promise<boolean> {
+export async function syncFromSupabase(): Promise<{
+  success: boolean;
+  message: string;
+  counts?: Record<string, number>;
+}> {
   const supabase = getSupabase();
-  if (!supabase) return false;
+  if (!supabase) return { success: false, message: 'Supabase tidak aktif atau kredensial belum diisi' };
 
   try {
     const [
@@ -411,42 +415,172 @@ export async function syncFromSupabase(): Promise<boolean> {
       supabase.from('election_periods').select('*').order('created_at', { ascending: false }),
       supabase.from('committees').select('*'),
       supabase.from('candidates').select('*').order('ballot_number', { ascending: true }),
-      supabase.from('voters').select('*'),
+      supabase.from('voters').select('*').limit(10000),
       supabase.from('votes').select('*'),
       supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(300),
       supabase.from('users').select('*'),
     ]);
 
-    if (schoolRes.data) {
-      setItem(STORAGE_KEYS.SCHOOL, schoolRes.data);
+    let updatedCount = 0;
+
+    if (schoolRes.data && !schoolRes.error) {
+      const currentSchool = getItem<School>(STORAGE_KEYS.SCHOOL, DEFAULT_SCHOOL);
+      setItem(STORAGE_KEYS.SCHOOL, { ...currentSchool, ...schoolRes.data });
+      updatedCount++;
     }
-    if (periodsRes.data && periodsRes.data.length > 0) {
+    if (Array.isArray(periodsRes.data) && !periodsRes.error && periodsRes.data.length > 0) {
       setItem(STORAGE_KEYS.PERIODS, periodsRes.data);
+      updatedCount++;
     }
-    if (committeesRes.data && committeesRes.data.length > 0) {
+    if (Array.isArray(committeesRes.data) && !committeesRes.error && committeesRes.data.length > 0) {
       setItem(STORAGE_KEYS.COMMITTEES, committeesRes.data);
+      updatedCount++;
     }
-    if (candidatesRes.data && candidatesRes.data.length > 0) {
+    if (Array.isArray(candidatesRes.data) && !candidatesRes.error && candidatesRes.data.length > 0) {
       setItem(STORAGE_KEYS.CANDIDATES, candidatesRes.data);
+      updatedCount++;
     }
-    if (votersRes.data && votersRes.data.length > 0) {
+    if (Array.isArray(votersRes.data) && !votersRes.error && votersRes.data.length > 0) {
       setItem(STORAGE_KEYS.VOTERS, votersRes.data);
+      updatedCount++;
     }
-    if (votesRes.data) {
+    if (Array.isArray(votesRes.data) && !votesRes.error) {
       setItem(STORAGE_KEYS.VOTES, votesRes.data);
+      updatedCount++;
     }
-    if (logsRes.data && logsRes.data.length > 0) {
+    if (Array.isArray(logsRes.data) && !logsRes.error && logsRes.data.length > 0) {
       setItem(STORAGE_KEYS.AUDIT_LOGS, logsRes.data);
+      updatedCount++;
     }
-    if (usersRes.data && usersRes.data.length > 0) {
+    if (Array.isArray(usersRes.data) && !usersRes.error && usersRes.data.length > 0) {
       setItem(STORAGE_KEYS.USERS, usersRes.data);
+      updatedCount++;
     }
 
+    // SIARKAN NOTIFIKASI KE SELURUH KOMPONEN UI AGAR RE-RENDER SECARA INSTAN
+    realtimeBus.notify('school_updated', schoolRes.data);
+    realtimeBus.notify('periods_updated', periodsRes.data);
+    realtimeBus.notify('candidates_updated', candidatesRes.data);
+    realtimeBus.notify('voters_updated', votersRes.data);
+    realtimeBus.notify('vote_casted', { source: 'supabase_sync' });
+    realtimeBus.notify('committees_updated', committeesRes.data);
+    realtimeBus.notify('users_updated', usersRes.data);
+    realtimeBus.notify('audit_updated', logsRes.data);
     realtimeBus.notify('supabase_synced');
-    return true;
+
+    return {
+      success: true,
+      message: `Sinkronisasi cloud berhasil. (${updatedCount} entitas diperbarui)`,
+      counts: {
+        'Paslon': candidatesRes.data?.length ?? 0,
+        'Pemilih (DPT)': votersRes.data?.length ?? 0,
+        'Suara Masuk': votesRes.data?.length ?? 0,
+        'Periode': periodsRes.data?.length ?? 0,
+      },
+    };
   } catch (err) {
     console.warn('Gagal sinkronisasi data dari Supabase:', err);
-    return false;
+    return {
+      success: false,
+      message: `Gagal sinkronisasi: ${(err as Error).message}`,
+    };
+  }
+}
+
+// Fitur Unggah Seluruh Data Lokal ke Cloud Supabase (Berguna untuk Initial Push dari Device 1)
+export async function uploadLocalToSupabase(): Promise<{
+  success: boolean;
+  message: string;
+  counts: Record<string, number>;
+}> {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return { success: false, message: 'Koneksi Supabase belum aktif atau kredensial kosong.', counts: {} };
+  }
+
+  try {
+    const school = getItem<School>(STORAGE_KEYS.SCHOOL, DEFAULT_SCHOOL);
+    const periods = getItem<ElectionPeriod[]>(STORAGE_KEYS.PERIODS, DEFAULT_PERIODS);
+    const committees = getItem<Committee[]>(STORAGE_KEYS.COMMITTEES, DEFAULT_COMMITTEES);
+    const candidates = getItem<Candidate[]>(STORAGE_KEYS.CANDIDATES, DEFAULT_CANDIDATES);
+    const voters = getItem<Voter[]>(STORAGE_KEYS.VOTERS, []);
+    const votes = getItem<Vote[]>(STORAGE_KEYS.VOTES, []);
+    const users = getItem<AppUser[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
+
+    // 1. Upload Data Sekolah
+    const cleanSchool = {
+      id: school.id || 'sch-01',
+      name: school.name,
+      npsn: school.npsn,
+      type: school.type || 'OSIS',
+      logo_url: school.logo_url || '',
+      address: school.address || '',
+      principal_name: school.principal_name || '',
+      principal_nip: school.principal_nip || '',
+    };
+    await supabase.from('schools').upsert(cleanSchool);
+
+    // 2. Upload Periode
+    if (periods.length > 0) {
+      await supabase.from('election_periods').upsert(periods);
+    }
+
+    // 3. Upload Panitia (sanitize tanpa sk_file_data besar jika ada)
+    if (committees.length > 0) {
+      const cleanComm = committees.map((c) => ({
+        id: c.id,
+        election_period_id: c.election_period_id,
+        sk_number: c.sk_number,
+        sk_date: c.sk_date,
+        sk_file_name: c.sk_file_name || null,
+        member_name: c.member_name,
+        role: c.role,
+        email: c.email || '',
+        status: c.status || 'aktif',
+      }));
+      await supabase.from('committees').upsert(cleanComm);
+    }
+
+    // 4. Upload Paslon
+    if (candidates.length > 0) {
+      await supabase.from('candidates').upsert(candidates);
+    }
+
+    // 5. Upload DPT (dalam batch 100)
+    if (voters.length > 0) {
+      const chunkSize = 100;
+      for (let i = 0; i < voters.length; i += chunkSize) {
+        const chunk = voters.slice(i, i + chunkSize);
+        await supabase.from('voters').upsert(chunk);
+      }
+    }
+
+    // 6. Upload Suara Sah (jika ada)
+    if (votes.length > 0) {
+      await supabase.from('votes').upsert(votes);
+    }
+
+    // 7. Upload Pengguna
+    if (users.length > 0) {
+      await supabase.from('users').upsert(users);
+    }
+
+    return {
+      success: true,
+      message: 'Berhasil mengunggah seluruh data lokal ke Cloud Supabase!',
+      counts: {
+        'Periode': periods.length,
+        'Paslon': candidates.length,
+        'DPT (Siswa)': voters.length,
+        'Suara': votes.length,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: `Gagal mengunggah data: ${(err as Error).message}`,
+      counts: {},
+    };
   }
 }
 
@@ -477,12 +611,37 @@ export function initializeStorage(): void {
     setItem(STORAGE_KEYS.USERS, DEFAULT_USERS);
   }
 
-  // Jika Supabase aktif, sinkronkan data & daftarkan listener WebSocket realtime
-  if (isSupabaseActive()) {
-    syncFromSupabase();
-    setupRealtimeSubscription((table) => {
-      console.log(`[Supabase Realtime] Perubahan pada tabel: ${table}. Sinkronisasi...`);
+  const activateRealtime = () => {
+    if (isSupabaseActive()) {
       syncFromSupabase();
+      setupRealtimeSubscription((table) => {
+        console.log(`[Supabase Realtime] Perubahan pada tabel: ${table}. Menyinkronkan...`);
+        syncFromSupabase();
+      });
+    }
+  };
+
+  // 1. Mulai realtime jika konfigurasi sudah ada di localStorage
+  activateRealtime();
+
+  // 2. Ambil juga konfigurasi dari server backend (jika device lain baru pertama kali buka)
+  fetchServerSupabaseConfig().then((cfg) => {
+    if (cfg.isConfigured) {
+      activateRealtime();
+    }
+  });
+
+  // 3. Pasang auto-sync saat jendela browser difokuskan kembali (tab aktif)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', () => {
+      if (isSupabaseActive()) {
+        syncFromSupabase();
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && isSupabaseActive()) {
+        syncFromSupabase();
+      }
     });
   }
 }

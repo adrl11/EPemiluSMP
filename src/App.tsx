@@ -43,11 +43,13 @@ export default function App() {
     realtimeBus.addEventListener('school_updated', handleUpdate);
     realtimeBus.addEventListener('periods_updated', handleUpdate);
     realtimeBus.addEventListener('data_reset', handleUpdate);
+    realtimeBus.addEventListener('supabase_synced', handleUpdate);
 
     return () => {
       realtimeBus.removeEventListener('school_updated', handleUpdate);
       realtimeBus.removeEventListener('periods_updated', handleUpdate);
       realtimeBus.removeEventListener('data_reset', handleUpdate);
+      realtimeBus.removeEventListener('supabase_synced', handleUpdate);
     };
   }, []);
 
