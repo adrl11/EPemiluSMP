@@ -1,6 +1,7 @@
 import React from 'react';
 import { School, ElectionPeriod, Candidate, QuickCountStat, ElectionMetrics, Committee } from '../../types';
 import { Printer, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { db } from '../../lib/storage';
 
 interface PrintableBAHPProps {
   school: School;
@@ -66,20 +67,57 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
 
       {/* Official Document Sheet */}
       <div className="max-w-4xl mx-auto bg-white p-8 sm:p-14 rounded-2xl shadow-xl print:shadow-none print:p-0 border border-slate-200 print:border-none">
-        {/* Kop Surat Institusi */}
-        <div className="border-b-4 border-double border-slate-900 pb-4 mb-6 text-center">
-          <div className="text-xs uppercase font-bold tracking-widest text-slate-600">
-            {isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'DINAS PENDIDIKAN DAN KEBUDAYAAN'}
+        {/* Kop Surat Institusi Resmi */}
+        <div className="border-b-4 border-double border-slate-900 pb-4 mb-6">
+          <div className="flex items-center justify-between gap-4">
+            {/* Logo Pemda (Kiri) */}
+            <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+              {school.pemda_logo_url ? (
+                <img
+                  src={school.pemda_logo_url}
+                  alt="Logo Pemda"
+                  referrerPolicy="no-referrer"
+                  className="max-h-20 max-w-20 object-contain"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 print:hidden flex items-center justify-center text-[10px] text-slate-400 text-center font-medium">
+                  Logo Pemda
+                </div>
+              )}
+            </div>
+
+            {/* Teks Identitas Lembaga (Tengah) */}
+            <div className="flex-1 text-center">
+              <div className="text-xs uppercase font-bold tracking-widest text-slate-700">
+                {isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN'}
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 tracking-wide mt-0.5">
+                {school.name}
+              </h1>
+              <p className="text-xs text-slate-700 mt-0.5 font-medium">
+                {school.address} &bull; NPSN: {school.npsn}
+              </p>
+              <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                PANITIA PEMILIHAN {orgName} TAHUN AJARAN {activePeriod?.academic_year || '2026/2027'}
+              </p>
+            </div>
+
+            {/* Logo Sekolah (Kanan) */}
+            <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+              {school.logo_url ? (
+                <img
+                  src={school.logo_url}
+                  alt="Logo Sekolah"
+                  referrerPolicy="no-referrer"
+                  className="max-h-20 max-w-20 object-contain"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 print:hidden flex items-center justify-center text-[10px] text-slate-400 text-center font-medium">
+                  Logo Sekolah
+                </div>
+              )}
+            </div>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 tracking-wide mt-0.5">
-            {school.name}
-          </h1>
-          <p className="text-xs text-slate-700 mt-0.5 font-medium">
-            {school.address} &bull; NPSN: {school.npsn}
-          </p>
-          <p className="text-[11px] text-slate-500">
-            PANITIA PEMILIHAN {orgName} TAHUN AJARAN {activePeriod?.academic_year || '2026/2027'}
-          </p>
         </div>
 
         {/* Document Header */}
@@ -104,8 +142,12 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
           </p>
           <p>
             Pelaksanaan kegiatan pemilihan ini berlandaskan pada Surat Keputusan Kepala Sekolah Nomor:{' '}
-            <strong>{ketuaPanitia?.sk_number || '421.3/089/SMAN1/IX/2026'}</strong> tentang Pembentukan Panitia
-            Pelaksana Pemilihan.
+            <strong>
+              {ketuaPanitia?.sk_number ||
+                committees[0]?.sk_number ||
+                db.getSKConfig(activePeriod?.id).sk_number}
+            </strong>{' '}
+            tentang Pembentukan Panitia Pelaksana Pemilihan.
           </p>
         </div>
 

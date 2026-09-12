@@ -50,6 +50,34 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
     setInternalTab(tab);
     if (onTabChange) onTabChange(tab);
   };
+
+  // Periode Pemilihan Dinamis (Sinkron dengan Menu Admin & Real-time)
+  const [periods, setPeriods] = useState<ElectionPeriod[]>(() => db.getPeriods());
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>(
+    () => activePeriod?.id || db.getActivePeriod()?.id || ''
+  );
+
+  useEffect(() => {
+    if (activePeriod?.id) {
+      setSelectedPeriodId(activePeriod.id);
+    }
+  }, [activePeriod?.id]);
+
+  useEffect(() => {
+    const handlePeriods = () => {
+      const list = db.getPeriods();
+      setPeriods(list);
+      const active = db.getActivePeriod();
+      if (active && (!selectedPeriodId || !list.some((p) => p.id === selectedPeriodId))) {
+        setSelectedPeriodId(active.id);
+      }
+    };
+    realtimeBus.addEventListener('periods_updated', handlePeriods);
+    return () => realtimeBus.removeEventListener('periods_updated', handlePeriods);
+  }, [selectedPeriodId]);
+
+  const currentPeriod = periods.find((p) => p.id === selectedPeriodId) || activePeriod || periods[0] || null;
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [voters, setVoters] = useState<Voter[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,9 +150,9 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
   };
 
   const loadData = () => {
-    if (!activePeriod) return;
-    setCandidates(db.getCandidates(activePeriod.id));
-    setVoters(db.getVoters(activePeriod.id));
+    if (!currentPeriod) return;
+    setCandidates(db.getCandidates(currentPeriod.id));
+    setVoters(db.getVoters(currentPeriod.id));
   };
 
   useEffect(() => {
@@ -142,12 +170,12 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
       realtimeBus.removeEventListener('vote_casted', handleUpdate);
       realtimeBus.removeEventListener('data_reset', handleUpdate);
     };
-  }, [activePeriod]);
+  }, [currentPeriod?.id]);
 
   // Handle Candidate Form Submit
   const handleSaveCandidate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activePeriod) return;
+    if (!currentPeriod) return;
 
     const missionArr = candForm.mission
       .split('\n')
@@ -160,7 +188,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
 
     db.saveCandidate(
       {
-        election_period_id: activePeriod.id,
+        election_period_id: currentPeriod.id,
         ballot_number: Number(candForm.ballot_number),
         chairman_name: candForm.chairman_name,
         vice_chairman_name: candForm.vice_chairman_name,
@@ -237,7 +265,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
   // Handle Add Single Voter
   const handleSaveVoter = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activePeriod) return;
+    if (!currentPeriod) return;
     if (voterForm.nisn.length !== 10) {
       alert('NISN harus tepat 10 digit numerik!');
       return;
@@ -252,7 +280,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
       });
     } else {
       db.addSingleVoter({
-        election_period_id: activePeriod.id,
+        election_period_id: currentPeriod.id,
         nisn: voterForm.nisn.trim(),
         full_name: voterForm.full_name.trim(),
         class_name: voterForm.class_name.trim(),
@@ -267,7 +295,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
 
   // Handle CSV File Upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!activePeriod || !e.target.files || !e.target.files[0]) return;
+    if (!currentPeriod || !e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -278,7 +306,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
           alert('Format berkas CSV tidak valid atau kosong. Silakan gunakan template resmi.');
           return;
         }
-        const importedCount = db.importVoters(activePeriod.id, parsed);
+        const importedCount = db.importVoters(currentPeriod.id, parsed);
         alert(`Berhasil mengimpor ${importedCount} data siswa ke DPT!`);
       }
     };
@@ -300,19 +328,55 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
 
   // Bulk Regenerate PINs
   const handleBulkRegenerate = () => {
-    if (!activePeriod) return;
+    if (!currentPeriod) return;
     if (
       confirm(
         'Generate ulang token PIN untuk seluruh pemilih yang BELUM memilih? Seluruh kartu cetak yang lama harus diganti dengan kartu baru!'
       )
     ) {
-      const count = db.regenerateAllPins(activePeriod.id);
+      const count = db.regenerateAllPins(currentPeriod.id);
       alert(`Berhasil membuat ulang ${count} token PIN pemilih.`);
     }
   };
 
-  // Filter Voters
-  const classesList = Array.from(new Set(voters.map((v) => v.class_name))).sort();
+  // Filter Voters & Tingkat Detection
+  const classesList: string[] = Array.from(new Set<string>(voters.map((v) => v.class_name))).sort();
+
+  // Deteksi jenjang sekolah: baik dari konfigurasi profil sekolah atau auto-detect dari nama-nama kelas DPT
+  const hasSmpClass = classesList.some((cls: string) => {
+    const clean = cls.trim().toUpperCase();
+    return /^(VII|VIII|IX|7|8|9)(\b|[\s\-_A-Z0-9])/i.test(clean);
+  });
+  const hasSmaClass = classesList.some((cls: string) => {
+    const clean = cls.trim().toUpperCase();
+    return /^(X|XI|XII|10|11|12)(\b|[\s\-_A-Z0-9])/i.test(clean);
+  });
+
+  const isSmp = school.education_level === 'SMP' || (hasSmpClass && !hasSmaClass);
+
+  // Helper matching tingkat
+  const matchLevel = (className: string, filterKey: string): boolean => {
+    const clean = className.trim().toUpperCase();
+    if (filterKey === 'TINGKAT_7' || filterKey === 'TINGKAT_VII') {
+      return /^(VII\b|7\b|VII[\s\-_]|7[\s\-_A-Z])/i.test(clean);
+    }
+    if (filterKey === 'TINGKAT_8' || filterKey === 'TINGKAT_VIII') {
+      return /^(VIII\b|8\b|VIII[\s\-_]|8[\s\-_A-Z])/i.test(clean);
+    }
+    if (filterKey === 'TINGKAT_9' || filterKey === 'TINGKAT_IX') {
+      return /^(IX\b|9\b|IX[\s\-_]|9[\s\-_A-Z])/i.test(clean);
+    }
+    if (filterKey === 'TINGKAT_10' || filterKey === 'TINGKAT_X') {
+      return /^(X\b|10\b|X[\s\-_]|10[\s\-_A-Z])/i.test(clean);
+    }
+    if (filterKey === 'TINGKAT_11' || filterKey === 'TINGKAT_XI') {
+      return /^(XI\b|11\b|XI[\s\-_]|11[\s\-_A-Z])/i.test(clean);
+    }
+    if (filterKey === 'TINGKAT_12' || filterKey === 'TINGKAT_XII') {
+      return /^(XII\b|12\b|XII[\s\-_]|12[\s\-_A-Z])/i.test(clean);
+    }
+    return false;
+  };
 
   const filteredVoters = voters.filter((v) => {
     const matchQuery =
@@ -322,7 +386,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
       selectedClassFilter === 'ALL'
         ? true
         : selectedClassFilter.startsWith('TINGKAT_')
-        ? v.class_name.toUpperCase().startsWith(selectedClassFilter.replace('TINGKAT_', ''))
+        ? matchLevel(v.class_name, selectedClassFilter)
         : v.class_name === selectedClassFilter;
     return matchQuery && matchClass;
   });
@@ -332,7 +396,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
     return (
       <PrintableTokenCards
         school={school}
-        activePeriod={activePeriod}
+        activePeriod={currentPeriod}
         voters={filteredVoters}
         onBack={() => setIsPrintMode(false)}
       />
@@ -350,20 +414,88 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
             </span>
             <span className="text-xs text-slate-400 font-medium">NPSN: {school.npsn}</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2 tracking-tight">
-            Manajemen Pilketos &bull; {activePeriod?.period_name || 'Periode Pemilihan'}
-          </h2>
+
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Manajemen Pilketos &bull; {currentPeriod?.period_name || 'Periode Pemilihan'}
+            </h2>
+
+            {periods.length > 1 && (
+              <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 transition-colors">
+                <span className="text-[11px] font-bold text-slate-500">Pilih Periode:</span>
+                <select
+                  value={currentPeriod?.id || ''}
+                  onChange={(e) => setSelectedPeriodId(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-transparent border-none outline-none cursor-pointer pr-1"
+                >
+                  {periods.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.academic_year} &mdash; {p.period_name} ({p.status.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
             Kelola data pasangan calon, Daftar Pemilih Tetap (DPT), pencetakan token kartu suara siswa, dan pemantauan bilik suara secara real-time.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
-          <div className="bg-indigo-50/70 border border-indigo-200/80 px-4 py-2.5 rounded-xl text-left sm:text-right">
-            <p className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider">Status Pemilihan</p>
-            <p className="text-xs font-black text-indigo-950 flex items-center sm:justify-end gap-1.5 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{activePeriod?.status === 'active' ? 'PEMUNGUTAN AKTIF' : 'PERSIAPAN'}</span>
+          <div
+            className={`px-4 py-2.5 rounded-xl text-left sm:text-right border transition-all ${
+              currentPeriod?.status === 'aktif'
+                ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+                : currentPeriod?.status === 'selesai'
+                ? 'bg-slate-100 border-slate-300 text-slate-800'
+                : 'bg-amber-50/80 border-amber-300 text-amber-950'
+            }`}
+          >
+            <p
+              className={`text-[10px] font-bold uppercase tracking-wider ${
+                currentPeriod?.status === 'aktif'
+                  ? 'text-emerald-700'
+                  : currentPeriod?.status === 'selesai'
+                  ? 'text-slate-600'
+                  : 'text-amber-700'
+              }`}
+            >
+              Status Pemilihan
+            </p>
+            <p className="text-xs font-black flex items-center sm:justify-end gap-1.5 mt-0.5">
+              {currentPeriod?.status === 'aktif' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-emerald-900 font-extrabold">PEMUNGUTAN SUARA AKTIF</span>
+                </>
+              ) : currentPeriod?.status === 'selesai' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span className="text-slate-700 font-bold">SELESAI (DITUTUP)</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span className="text-amber-900 font-bold">TAHAP PERSIAPAN (DRAFT)</span>
+                </>
+              )}
+            </p>
+            <p
+              className={`text-[10px] mt-0.5 hidden sm:block ${
+                currentPeriod?.status === 'aktif'
+                  ? 'text-emerald-700 font-medium'
+                  : currentPeriod?.status === 'selesai'
+                  ? 'text-slate-500 font-medium'
+                  : 'text-amber-700 font-medium'
+              }`}
+            >
+              {currentPeriod?.status === 'aktif'
+                ? 'Pemungutan suara terbuka untuk siswa'
+                : currentPeriod?.status === 'selesai'
+                ? 'Pemungutan suara telah ditutup & diarsipkan'
+                : 'Pemungutan suara belum dibuka (Mode Persiapan)'}
             </p>
           </div>
         </div>
@@ -464,23 +596,35 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
                 />
               </div>
 
-              {/* Class Filter Dropdown */}
+              {/* Class Filter Dropdown (Dinamis: Mendukung SMP/MTs & SMA/SMK/MA) */}
               <select
                 value={selectedClassFilter}
                 onChange={(e) => setSelectedClassFilter(e.target.value)}
                 className="py-2 px-3 rounded-xl border border-slate-300 text-xs bg-white text-slate-700 font-medium"
               >
                 <option value="ALL">Semua Tingkat &amp; Kelas</option>
-                <option value="TINGKAT_X">Tingkat X / Kelas 10</option>
-                <option value="TINGKAT_XI">Tingkat XI / Kelas 11</option>
-                <option value="TINGKAT_XII">Tingkat XII / Kelas 12</option>
-                <optgroup label="Pilih Kelas Spesifik">
-                  {classesList.map((cls) => (
-                    <option key={cls} value={cls}>
-                      Kelas {cls}
-                    </option>
-                  ))}
-                </optgroup>
+                {isSmp ? (
+                  <>
+                    <option value="TINGKAT_7">Tingkat VII / Kelas 7</option>
+                    <option value="TINGKAT_8">Tingkat VIII / Kelas 8</option>
+                    <option value="TINGKAT_9">Tingkat IX / Kelas 9</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="TINGKAT_X">Tingkat X / Kelas 10</option>
+                    <option value="TINGKAT_XI">Tingkat XI / Kelas 11</option>
+                    <option value="TINGKAT_XII">Tingkat XII / Kelas 12</option>
+                  </>
+                )}
+                {classesList.length > 0 && (
+                  <optgroup label="Pilih Kelas Spesifik">
+                    {classesList.map((cls) => (
+                      <option key={cls} value={cls}>
+                        Kelas {cls}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
@@ -498,16 +642,16 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
               </label>
 
               <button
-                onClick={downloadDptTemplate}
+                onClick={() => downloadDptTemplate(isSmp ? 'SMP' : 'SMA')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
-                title="Unduh Format Contoh CSV"
+                title={`Unduh Format Contoh CSV (${isSmp ? 'SMP/MTs' : 'SMA/SMK'})`}
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Template CSV</span>
+                <span>Template CSV ({isSmp ? 'SMP' : 'SMA'})</span>
               </button>
 
               <button
-                onClick={() => exportDptToCsv(voters, activePeriod?.period_name || 'DPT')}
+                onClick={() => exportDptToCsv(voters, currentPeriod?.period_name || 'DPT')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
                 title="Ekspor Data DPT ke File CSV"
               >
@@ -669,22 +813,57 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
               </p>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
-              <button
-                onClick={() => setIsPrintMode(true)}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Buka Tata Letak Cetak Kartu ({filteredVoters.length} Kartu)</span>
-              </button>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700">Filter Kartu:</span>
+                <select
+                  value={selectedClassFilter}
+                  onChange={(e) => setSelectedClassFilter(e.target.value)}
+                  className="py-1.5 px-3 rounded-xl border border-slate-300 text-xs bg-white text-slate-700 font-medium"
+                >
+                  <option value="ALL">Semua Tingkat &amp; Kelas ({voters.length})</option>
+                  {isSmp ? (
+                    <>
+                      <option value="TINGKAT_7">Tingkat VII / Kelas 7</option>
+                      <option value="TINGKAT_8">Tingkat VIII / Kelas 8</option>
+                      <option value="TINGKAT_9">Tingkat IX / Kelas 9</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="TINGKAT_X">Tingkat X / Kelas 10</option>
+                      <option value="TINGKAT_XI">Tingkat XI / Kelas 11</option>
+                      <option value="TINGKAT_XII">Tingkat XII / Kelas 12</option>
+                    </>
+                  )}
+                  {classesList.length > 0 && (
+                    <optgroup label="Pilih Kelas Spesifik">
+                      {classesList.map((cls) => (
+                        <option key={cls} value={cls}>
+                          Kelas {cls}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
 
-              <button
-                onClick={handleBulkRegenerate}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
-                <span>Generate Ulang PIN Massal</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setIsPrintMode(true)}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Buka Tata Letak Cetak ({filteredVoters.length} Kartu)</span>
+                </button>
+
+                <button
+                  onClick={handleBulkRegenerate}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Generate Ulang PIN Massal</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -700,7 +879,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
                     KARTU SUARA PEMILIH OSIS
                   </span>
                   <div className="text-xs font-bold text-slate-900">{school.name}</div>
-                  <div className="text-[9px] text-slate-500">T.A {activePeriod?.academic_year}</div>
+                  <div className="text-[9px] text-slate-500">T.A {currentPeriod?.academic_year}</div>
                 </div>
 
                 <div className="space-y-1 text-xs">
@@ -833,9 +1012,58 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
       {/* TAB 4: MONITORING BILIK SUARA */}
       {activeTab === 'monitoring' && (
         <div className="space-y-6">
+          {/* Ringkasan Partisipasi Per Tingkat */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              Partisipasi Per Tingkat / Jenjang ({isSmp ? 'SMP / MTs' : 'SMA / SMK / MA'})
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Ringkasan pemilih yang telah menyalurkan hak suara dikelompokkan per tingkat angkatan.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {(isSmp
+                ? [
+                    { key: 'TINGKAT_7', label: 'Tingkat VII (Kelas 7)' },
+                    { key: 'TINGKAT_8', label: 'Tingkat VIII (Kelas 8)' },
+                    { key: 'TINGKAT_9', label: 'Tingkat IX (Kelas 9)' },
+                  ]
+                : [
+                    { key: 'TINGKAT_10', label: 'Tingkat X (Kelas 10)' },
+                    { key: 'TINGKAT_11', label: 'Tingkat XI (Kelas 11)' },
+                    { key: 'TINGKAT_12', label: 'Tingkat XII (Kelas 12)' },
+                  ]
+              ).map((lvl) => {
+                const inLevel = voters.filter((v) => matchLevel(v.class_name, lvl.key));
+                const votedInLevel = inLevel.filter((v) => v.has_voted).length;
+                const percentage = inLevel.length > 0 ? (votedInLevel / inLevel.length) * 100 : 0;
+                return (
+                  <div key={lvl.key} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-xs text-slate-800">{lvl.label}</span>
+                      <span className="font-mono text-xs font-bold text-indigo-700">
+                        {percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden mb-2">
+                      <div
+                        className="bg-indigo-600 h-full transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-slate-600 flex justify-between font-medium">
+                      <span>Sudah: <strong className="text-emerald-600">{votedInLevel}</strong></span>
+                      <span>Belum: <strong className="text-amber-600">{inLevel.length - votedInLevel}</strong></span>
+                      <span>Total: <strong>{inLevel.length}</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
             <h3 className="text-base font-bold text-slate-900 mb-4">
-              Rekapitulasi Partisipasi Per Kelas
+              Rekapitulasi Partisipasi Per Kelas ({classesList.length} Kelas Terdaftar)
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {classesList.map((cls) => {
@@ -927,7 +1155,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
                     type="text"
                     value={candForm.chairman_class}
                     onChange={(e) => setCandForm({ ...candForm, chairman_class: e.target.value })}
-                    placeholder="Contoh: XI MIPA 1"
+                    placeholder={isSmp ? 'Contoh: VIII-A / 8-B' : 'Contoh: XI MIPA 1 / 11-A'}
                     className="w-full p-2 rounded-lg border border-slate-300"
                     required
                   />
@@ -951,7 +1179,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
                     type="text"
                     value={candForm.vice_chairman_class}
                     onChange={(e) => setCandForm({ ...candForm, vice_chairman_class: e.target.value })}
-                    placeholder="Contoh: X-B"
+                    placeholder={isSmp ? 'Contoh: VII-C / 7-A' : 'Contoh: X-B / 10-2'}
                     className="w-full p-2 rounded-lg border border-slate-300"
                     required
                   />
@@ -1071,7 +1299,7 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
                     type="text"
                     value={voterForm.class_name}
                     onChange={(e) => setVoterForm({ ...voterForm, class_name: e.target.value })}
-                    placeholder="X-A / XI MIPA 1"
+                    placeholder={isSmp ? 'VII-A / 8-B / IX-1' : 'X-A / XI MIPA 1 / 12-2'}
                     className="w-full p-2.5 rounded-lg border border-slate-300"
                     required
                   />

@@ -23,12 +23,17 @@ import {
   Search,
   Users,
   Database,
+  Download,
+  Upload,
+  Eye,
 } from 'lucide-react';
 import { PrintableBAHP } from '../print/PrintableBAHP';
+import { PrintableSK } from '../print/PrintableSK';
 import { Pagination } from '../common/Pagination';
 import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 import { ChangePasswordView } from '../common/ChangePasswordView';
 import { SupabaseSettings } from './SupabaseSettings';
+import { downloadSKDocument } from '../../lib/exportUtils';
 
 interface AdminDashboardProps {
   school: School;
@@ -61,10 +66,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isBahpPrintMode, setIsBahpPrintMode] = useState(false);
+  const [isSkPrintMode, setIsSkPrintMode] = useState(false);
 
   // School config form
   const [schoolForm, setSchoolForm] = useState<School>(school);
   const [schoolSaveSuccess, setSchoolSaveSuccess] = useState(false);
+
+  // Logo upload handlers for school & pemda
+  const handleSchoolLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setSchoolForm((prev) => ({ ...prev, logo_url: event.target!.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePemdaLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setSchoolForm((prev) => ({ ...prev, pemda_logo_url: event.target!.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Period Modal (Create & Edit)
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
@@ -89,6 +120,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     email: '',
     status: 'aktif' as 'aktif' | 'nonaktif',
   });
+
+  // SK Kepanitiaan Configuration Modal State
+  const [isSkModalOpen, setIsSkModalOpen] = useState(false);
+  const [skConfigForm, setSkConfigForm] = useState<{
+    sk_number: string;
+    sk_date: string;
+    sk_file_name: string;
+    sk_file_data?: string;
+  }>({
+    sk_number: '421.3/089/SMAN1/IX/2026',
+    sk_date: '2026-09-01',
+    sk_file_name: 'SK_Kepanitiaan_Resmi.pdf',
+    sk_file_data: undefined,
+  });
+  const [skSaveSuccess, setSkSaveSuccess] = useState(false);
+  const [skDownloadedNotice, setSkDownloadedNotice] = useState(false);
 
   // User Management Modal (Create & Edit CRUD)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -253,13 +300,74 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // SK Kepanitiaan Handlers
+  const handleOpenSkModal = () => {
+    const currentSk = db.getSKConfig(activePeriod?.id);
+    setSkConfigForm({
+      sk_number: currentSk.sk_number || '421.3/089/SMAN1/IX/2026',
+      sk_date: currentSk.sk_date || '2026-09-01',
+      sk_file_name: currentSk.sk_file_name || 'SK_Kepanitiaan_Resmi.pdf',
+      sk_file_data: currentSk.sk_file_data,
+    });
+    setIsSkModalOpen(true);
+  };
+
+  const handleSaveSkConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!skConfigForm.sk_number.trim() || !skConfigForm.sk_date) {
+      alert('Nomor SK dan Tanggal Pengesahan wajib diisi!');
+      return;
+    }
+
+    db.updateCommitteeSK(
+      {
+        sk_number: skConfigForm.sk_number.trim(),
+        sk_date: skConfigForm.sk_date,
+        sk_file_name: skConfigForm.sk_file_name.trim() || 'SK_Kepanitiaan_Resmi.pdf',
+        sk_file_data: skConfigForm.sk_file_data,
+      },
+      activePeriod?.id
+    );
+
+    loadAll();
+    setIsSkModalOpen(false);
+    setSkSaveSuccess(true);
+    setTimeout(() => setSkSaveSuccess(false), 3500);
+  };
+
+  const handleDownloadSk = () => {
+    const currentSk = db.getSKConfig(activePeriod?.id);
+    downloadSKDocument(school, activePeriod, committees, currentSk);
+    setSkDownloadedNotice(true);
+    setTimeout(() => setSkDownloadedNotice(false), 4000);
+  };
+
+  const handleSkFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Ukuran file maksimal 10MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSkConfigForm((prev) => ({
+        ...prev,
+        sk_file_name: file.name,
+        sk_file_data: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Committee CRUD Handlers
   const handleOpenAddCommittee = () => {
     setEditingCommittee(null);
+    const currentSk = db.getSKConfig(activePeriod?.id);
     setCommitteeForm({
-      sk_number: committees[0]?.sk_number || '421.3/089/SMAN1/IX/2026',
-      sk_date: committees[0]?.sk_date || '2026-09-01',
-      sk_file_name: committees[0]?.sk_file_name || 'SK_Kepanitiaan_Resmi.pdf',
+      sk_number: currentSk.sk_number,
+      sk_date: currentSk.sk_date,
+      sk_file_name: currentSk.sk_file_name || 'SK_Kepanitiaan_Resmi.pdf',
       member_name: '',
       role: 'Anggota',
       email: '',
@@ -456,6 +564,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         metrics={statsRes.metrics}
         committees={committees}
         onBack={() => setIsBahpPrintMode(false)}
+      />
+    );
+  }
+
+  if (isSkPrintMode && activePeriod) {
+    const activeSk = db.getSKConfig(activePeriod.id);
+    return (
+      <PrintableSK
+        school={school}
+        activePeriod={activePeriod}
+        committees={committees}
+        skConfig={activeSk}
+        onBack={() => setIsSkPrintMode(false)}
       />
     );
   }
@@ -700,6 +821,191 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
+            {/* Jenjang Tingkat Pendidikan: SMP/MTs vs SMA/SMK/MA */}
+            <div>
+              <label className="block font-bold text-slate-700 mb-2">
+                Jenjang Satuan Pendidikan &amp; Struktur Tingkat Kelas
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label
+                  className={`p-3.5 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition-all ${
+                    (schoolForm.education_level || 'SMA') === 'SMP'
+                      ? 'border-indigo-600 bg-indigo-50/60 text-indigo-950 font-bold'
+                      : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="educationLevel"
+                    checked={(schoolForm.education_level || 'SMA') === 'SMP'}
+                    onChange={() => setSchoolForm({ ...schoolForm, education_level: 'SMP' })}
+                    className="accent-indigo-600"
+                  />
+                  <div>
+                    <div className="text-xs font-extrabold">Tingkat SMP / MTs</div>
+                    <div className="text-[11px] text-slate-500 font-normal">
+                      Tingkat VII (Kelas 7), VIII (Kelas 8), dan IX (Kelas 9)
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  className={`p-3.5 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition-all ${
+                    (schoolForm.education_level || 'SMA') === 'SMA'
+                      ? 'border-indigo-600 bg-indigo-50/60 text-indigo-950 font-bold'
+                      : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="educationLevel"
+                    checked={(schoolForm.education_level || 'SMA') === 'SMA'}
+                    onChange={() => setSchoolForm({ ...schoolForm, education_level: 'SMA' })}
+                    className="accent-indigo-600"
+                  />
+                  <div>
+                    <div className="text-xs font-extrabold">Tingkat SMA / SMK / MA</div>
+                    <div className="text-[11px] text-slate-500 font-normal">
+                      Tingkat X (Kelas 10), XI (Kelas 11), dan XII (Kelas 12)
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Menu Input Logo Sekolah & Logo Pemda (Untuk Kop Surat Dokumen) */}
+            <div className="pt-3 pb-2 border-t border-slate-100">
+              <div className="mb-3">
+                <label className="block font-bold text-slate-800 text-xs">
+                  Logo Resmi Satuan Pendidikan &amp; Pemerintah Daerah
+                </label>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Kedua logo ini akan dicetak secara simetris pada Kop Surat resmi dokumen Berita Acara (BAHP) dan Surat Keputusan (SK) Kepanitiaan.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Logo Pemerintah Daerah (Sisi Kiri Kop) */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <span>1. Logo Pemda / Kemenag</span>
+                      <span className="text-[10px] text-slate-500 font-normal">(Kiri Kop Surat)</span>
+                    </span>
+                    {schoolForm.pemda_logo_url && (
+                      <button
+                        type="button"
+                        onClick={() => setSchoolForm({ ...schoolForm, pemda_logo_url: '' })}
+                        className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                      >
+                        Hapus Logo
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl border border-slate-300 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                      {schoolForm.pemda_logo_url ? (
+                        <img
+                          src={schoolForm.pemda_logo_url}
+                          alt="Pratinjau Logo Pemda"
+                          referrerPolicy="no-referrer"
+                          className="max-h-14 max-w-14 object-contain"
+                        />
+                      ) : (
+                        <div className="text-[10px] text-slate-400 font-medium text-center px-1">
+                          Belum Ada Logo
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors">
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Pilih Berkas Logo Pemda</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePemdaLogoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="url"
+                        value={schoolForm.pemda_logo_url || ''}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, pemda_logo_url: e.target.value })}
+                        placeholder="Atau tautan URL logo pemda..."
+                        className="w-full p-2 rounded-lg border border-slate-300 font-mono text-[11px] bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    Logo Pemprov / Dinas Pendidikan / Kemenag Kabupaten / Kota.
+                  </p>
+                </div>
+
+                {/* 2. Logo Sekolah / Madrasah (Sisi Kanan Kop) */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <span>2. Logo Satuan Pendidikan</span>
+                      <span className="text-[10px] text-slate-500 font-normal">(Kanan Kop Surat)</span>
+                    </span>
+                    {schoolForm.logo_url && (
+                      <button
+                        type="button"
+                        onClick={() => setSchoolForm({ ...schoolForm, logo_url: '' })}
+                        className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                      >
+                        Hapus Logo
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl border border-slate-300 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                      {schoolForm.logo_url ? (
+                        <img
+                          src={schoolForm.logo_url}
+                          alt="Pratinjau Logo Sekolah"
+                          referrerPolicy="no-referrer"
+                          className="max-h-14 max-w-14 object-contain"
+                        />
+                      ) : (
+                        <div className="text-[10px] text-slate-400 font-medium text-center px-1">
+                          Belum Ada Logo
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors">
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Pilih Berkas Logo Sekolah</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleSchoolLogoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="url"
+                        value={schoolForm.logo_url || ''}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, logo_url: e.target.value })}
+                        placeholder="Atau tautan URL logo sekolah..."
+                        className="w-full p-2 rounded-lg border border-slate-300 font-mono text-[11px] bg-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    Logo resmi lambang almamater sekolah atau madrasah.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block font-bold text-slate-700 mb-1">
                 Alamat Lengkap Satuan Pendidikan
@@ -882,118 +1188,217 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* TAB 3: MANAJEMEN PANITIA & SK */}
-      {activeTab === 'panitia' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Surat Keputusan (SK) &amp; Susunan Panitia Pemilihan
-              </h3>
-              <p className="text-xs text-slate-500">
-                SK Pengesahan Kepanitiaan Pemilihan OSIS/OSIM oleh Kepala Sekolah
-              </p>
+      {activeTab === 'panitia' && (() => {
+        const activeSk = db.getSKConfig(activePeriod?.id);
+        const formattedDate = (() => {
+          try {
+            if (!activeSk.sk_date) return '-';
+            const d = new Date(activeSk.sk_date);
+            if (isNaN(d.getTime())) return activeSk.sk_date;
+            return d.toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            });
+          } catch {
+            return activeSk.sk_date;
+          }
+        })();
+
+        return (
+          <div className="space-y-4">
+            {skSaveSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Konfigurasi Surat Keputusan (SK) Kepanitiaan berhasil diperbarui dan disinkronkan ke seluruh panitia serta Berita Acara (BAHP)!</span>
+              </div>
+            )}
+
+            {skDownloadedNotice && (
+              <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Dokumen Surat Keputusan (SK) Kepanitiaan berhasil diunduh! Dokumen siap dicetak atau disimpan sebagai arsip PDF.</span>
+              </div>
+            )}
+
+            {/* Section Banner SK Legalitas (Sesuai Format Menu BAHP) */}
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-bold border border-indigo-400/30 uppercase mb-2">
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  Legalitas Kepanitiaan &amp; Dasar Hukum
+                </div>
+                <h3 className="text-lg sm:text-xl font-black">
+                  Surat Keputusan (SK) Kepanitiaan
+                </h3>
+                <p className="text-xs text-indigo-200 mt-1 max-w-xl">
+                  Dokumen resmi penetapan dan pengangkatan Panitia Pelaksana Pemilihan {school.type} oleh Kepala {school.type === 'OSIM' ? 'Madrasah' : 'Sekolah'}, lengkap dengan kop dinas, konsideran hukum, diktum ketetapan, dan lampiran susunan panitia.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap self-start md:self-auto shrink-0">
+                <button
+                  id="btn-view-sk-doc"
+                  onClick={() => setIsSkPrintMode(true)}
+                  className="px-5 py-2.5 bg-white hover:bg-indigo-50 text-slate-900 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Eye className="w-4 h-4 text-indigo-700" />
+                  <span>Lihat Dokumen SK</span>
+                </button>
+
+                <button
+                  id="btn-download-sk-single"
+                  onClick={handleDownloadSk}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Unduh satu berkas resmi Dokumen SK"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Unduh SK</span>
+                </button>
+
+                <button
+                  id="btn-edit-sk-config"
+                  onClick={handleOpenSkModal}
+                  className="px-4 py-2.5 bg-indigo-800/80 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl border border-indigo-500/40 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-indigo-300" />
+                  <span>Edit Data SK</span>
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={handleOpenAddCommittee}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Anggota Panitia</span>
-            </button>
-          </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Susunan Anggota Panitia Pemilihan
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Daftar personalia panitia yang bertugas pada periode aktif ini beserta hak akses portalnya.
+                </p>
+              </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div>
-                <span className="font-bold text-slate-700">Nomor SK Kepanitiaan: </span>
-                <span className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300">
-                  {committees[0]?.sk_number || '421.3/089/SMAN1/IX/2026'}
-                </span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-700">Tanggal Pengesahan: </span>
-                <span className="text-slate-900 font-mono">
-                  {committees[0]?.sk_date || '2026-09-01'}
-                </span>
-              </div>
+              <button
+                id="btn-add-committee-member"
+                onClick={handleOpenAddCommittee}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tambah Anggota Panitia</span>
+              </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3">Jabatan Panitia</th>
-                    <th className="px-4 py-3">Nama Anggota</th>
-                    <th className="px-4 py-3">Email Akun Login</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {committees
-                    .slice((committeePage - 1) * committeePageSize, committeePage * committeePageSize)
-                    .map((com) => (
-                    <tr key={com.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-4 py-3">
-                        <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
-                          {com.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-slate-900">
-                        {com.member_name}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-600">{com.email}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          {com.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleEditCommittee(com)}
-                            title="Edit Data Panitia"
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCommittee(com)}
-                            title="Hapus Anggota"
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {committees.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
-                        Belum ada anggota kepanitiaan yang didaftarkan.
-                      </td>
-                    </tr>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div>
+                    <span className="font-bold text-slate-500 block text-[10px] uppercase tracking-wider">
+                      Nomor SK Kepanitiaan
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded-md border border-slate-300 inline-block mt-0.5">
+                      {activeSk.sk_number}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 block text-[10px] uppercase tracking-wider">
+                      Tanggal Pengesahan
+                    </span>
+                    <span className="text-slate-900 font-semibold inline-block mt-0.5">
+                      {formattedDate}
+                    </span>
+                  </div>
+                  {activeSk.sk_file_name && (
+                    <div>
+                      <span className="font-bold text-slate-500 block text-[10px] uppercase tracking-wider">
+                        Dokumen Lampiran
+                      </span>
+                      <span className="text-slate-700 font-mono text-[11px] bg-white px-2.5 py-1 rounded-md border border-slate-200 inline-block mt-0.5">
+                        {activeSk.sk_file_name}
+                      </span>
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
+                </div>
 
-            <Pagination
-              currentPage={committeePage}
-              totalItems={committees.length}
-              pageSize={committeePageSize}
-              onPageChange={(p) => setCommitteePage(p)}
-              onPageSizeChange={(s) => {
-                setCommitteePageSize(s);
-                setCommitteePage(1);
-              }}
-              itemName="anggota panitia"
-            />
+                <div className="text-slate-500 text-[11px] font-medium">
+                  Status Legalitas: <span className="text-emerald-700 font-bold">Sah Terdaftar</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Jabatan Panitia</th>
+                      <th className="px-4 py-3">Nama Anggota</th>
+                      <th className="px-4 py-3">Email Akun Login</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {committees
+                      .slice((committeePage - 1) * committeePageSize, committeePage * committeePageSize)
+                      .map((com) => (
+                      <tr key={com.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
+                            {com.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">
+                          {com.member_name}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-slate-600">{com.email}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            {com.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleEditCommittee(com)}
+                              title="Edit Data Panitia"
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCommittee(com)}
+                              title="Hapus Anggota"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {committees.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                          Belum ada anggota kepanitiaan yang didaftarkan.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                currentPage={committeePage}
+                totalItems={committees.length}
+                pageSize={committeePageSize}
+                onPageChange={(p) => setCommitteePage(p)}
+                onPageSizeChange={(s) => {
+                  setCommitteePageSize(s);
+                  setCommitteePage(1);
+                }}
+                itemName="anggota panitia"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* TAB 4: AUDIT LOGS & BERITA ACARA HASIL PEMILIHAN (BAHP) */}
       {activeTab === 'audit_bahp' && (
@@ -1493,6 +1898,128 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-5 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 cursor-pointer"
                 >
                   {editingCommittee ? 'Simpan Perubahan' : 'Simpan Panitia'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit / Konfigurasi SK Kepanitiaan */}
+      {isSkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm">
+                  Konfigurasi Surat Keputusan (SK) Kepanitiaan
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsSkModalOpen(false)}
+                className="text-white/80 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSkConfig} className="p-6 space-y-4 text-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-blue-900 leading-relaxed">
+                <p className="font-bold text-xs text-blue-950 mb-1 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 inline" />
+                  Legalitas Surat Keputusan Pemilihan
+                </p>
+                <p className="text-[11px] text-blue-800">
+                  Nomor dan tanggal pengesahan SK diterbitkan oleh Kepala Sekolah/Madrasah. Nilai ini akan otomatis disinkronkan ke seluruh data anggota panitia dan naskah resmi <strong>Berita Acara Hasil Pemilihan (BAHP)</strong>.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Nomor Surat Keputusan (SK) Resmi <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={skConfigForm.sk_number}
+                  onChange={(e) => setSkConfigForm({ ...skConfigForm, sk_number: e.target.value })}
+                  placeholder="Contoh: 421.3/089/SMAN1/IX/2026"
+                  className="w-full p-2.5 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                  required
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Nomor register dinas surat keputusan pengangkatan panitia.
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tanggal Pengesahan SK <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={skConfigForm.sk_date}
+                  onChange={(e) => setSkConfigForm({ ...skConfigForm, sk_date: e.target.value })}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Berkas Dokumen SK (PDF / Word / Gambar)
+                </label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 cursor-pointer flex items-center gap-1.5 font-semibold text-xs transition-colors shrink-0">
+                      <Upload className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Pilih Berkas Lampiran</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        onChange={handleSkFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      value={skConfigForm.sk_file_name}
+                      onChange={(e) => setSkConfigForm({ ...skConfigForm, sk_file_name: e.target.value })}
+                      placeholder="SK_Kepanitiaan_Resmi.pdf"
+                      className="flex-1 p-2 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                    />
+                  </div>
+                  {skConfigForm.sk_file_data && (
+                    <div className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px]">
+                      <span className="truncate">Berkas kustom terlampir ({skConfigForm.sk_file_name})</span>
+                      <button
+                        type="button"
+                        onClick={() => setSkConfigForm({ ...skConfigForm, sk_file_data: undefined, sk_file_name: 'SK_Kepanitiaan_Resmi.html' })}
+                        className="text-rose-600 hover:text-rose-800 font-bold ml-2 cursor-pointer"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Anda dapat mengunggah berkas scan SK sekolah, atau biarkan sistem membuat format resmi standar siap cetak secara otomatis.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end pt-3 border-t border-slate-100 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSkModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 cursor-pointer text-xs"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-xs text-xs"
+                >
+                  Simpan Konfigurasi SK
                 </button>
               </div>
             </form>

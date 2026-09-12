@@ -78,9 +78,40 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold tracking-wide uppercase mb-4">
-            <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>Papan Rekapitulasi Real-Time &bull; LUBER-JURDIL</span>
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold tracking-wide uppercase">
+              <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>Papan Rekapitulasi Real-Time &bull; LUBER-JURDIL</span>
+            </div>
+
+            {activePeriod && (
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${
+                  activePeriod.status === 'aktif'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                    : activePeriod.status === 'selesai'
+                    ? 'bg-slate-500/20 text-slate-300 border-slate-400/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    activePeriod.status === 'aktif'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : activePeriod.status === 'selesai'
+                      ? 'bg-slate-400'
+                      : 'bg-amber-400'
+                  }`}
+                />
+                <span>
+                  {activePeriod.status === 'aktif'
+                    ? 'Pemungutan Suara Aktif'
+                    : activePeriod.status === 'selesai'
+                    ? 'Pemilihan Ditutup (Selesai)'
+                    : 'Tahap Persiapan (Draft)'}
+                </span>
+              </div>
+            )}
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">

@@ -85,8 +85,8 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
     if (e) e.preventDefault();
     setAuthError(null);
 
-    if (!activePeriod) {
-      setAuthError('Tidak ada periode pemilihan yang sedang berstatus AKTIF.');
+    if (!activePeriod || activePeriod.status !== 'aktif') {
+      setAuthError('Pemungutan suara belum dibuka atau periode pemilihan sedang tidak aktif (Draft/Selesai). Silakan hubungi Panitia Pemilihan.');
       return;
     }
 

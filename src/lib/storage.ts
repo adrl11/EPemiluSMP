@@ -38,7 +38,9 @@ const DEFAULT_SCHOOL: School = {
   name: 'SMA Negeri 1 Teladan Jakarta',
   npsn: '20108842',
   type: 'OSIS',
+  education_level: 'SMA',
   logo_url: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80',
+  pemda_logo_url: '',
   address: 'Jl. Wijaya Kusuma No. 45, Kebayoran Baru, Jakarta Selatan',
   principal_name: 'Drs. H. Bambang Soedirman, M.Pd.',
   principal_nip: '197108151998021004',
@@ -515,7 +517,7 @@ export const db = {
   },
   getActivePeriod(): ElectionPeriod | null {
     const periods = this.getPeriods();
-    return periods.find((p) => p.status === 'aktif') || null;
+    return periods.find((p) => p.status === 'aktif') || periods.find((p) => p.status === 'draft') || periods[0] || null;
   },
   createPeriod(periodData: Omit<ElectionPeriod, 'id' | 'created_at'>): ElectionPeriod {
     const periods = this.getPeriods();
@@ -629,6 +631,85 @@ export const db = {
   },
 
   // PANITIA
+  getSKConfig(periodId?: string): { sk_number: string; sk_date: string; sk_file_name?: string; sk_file_data?: string } {
+    const saved = getItem<{ sk_number: string; sk_date: string; sk_file_name?: string; sk_file_data?: string } | null>(
+      'epilketos_sk_config_v1',
+      null
+    );
+    if (saved) return saved;
+
+    const comms = this.getCommittees(periodId);
+    if (comms.length > 0 && comms[0].sk_number) {
+      return {
+        sk_number: comms[0].sk_number,
+        sk_date: comms[0].sk_date,
+        sk_file_name: comms[0].sk_file_name,
+        sk_file_data: comms[0].sk_file_data,
+      };
+    }
+    return {
+      sk_number: '421.3/089/SMAN1/IX/2026',
+      sk_date: '2026-09-01',
+      sk_file_name: 'SK_Kepanitiaan_Resmi.pdf',
+    };
+  },
+  updateCommitteeSK(
+    skData: { sk_number: string; sk_date: string; sk_file_name?: string; sk_file_data?: string },
+    periodId?: string
+  ): void {
+    setItem('epilketos_sk_config_v1', skData);
+    const all = this.getCommittees();
+    const targetPeriod = periodId || this.getActivePeriod()?.id;
+
+    const updatedAll = all.map((c) => {
+      if (!targetPeriod || c.election_period_id === targetPeriod) {
+        return {
+          ...c,
+          sk_number: skData.sk_number,
+          sk_date: skData.sk_date,
+          sk_file_name: skData.sk_file_name,
+          sk_file_data: skData.sk_file_data,
+        };
+      }
+      return c;
+    });
+
+    setItem(STORAGE_KEYS.COMMITTEES, updatedAll);
+    this.addAuditLog(
+      'admin',
+      'Admin Sekolah',
+      'UPDATE_COMMITTEE_SK',
+      `Memperbarui konfigurasi SK Kepanitiaan: No. ${skData.sk_number}, Tgl: ${skData.sk_date}`
+    );
+    realtimeBus.notify('committees_updated', updatedAll);
+
+    const supabase = getSupabase();
+    if (supabase) {
+      if (targetPeriod) {
+        supabase
+          .from('committees')
+          .update({
+            sk_number: skData.sk_number,
+            sk_date: skData.sk_date,
+            sk_file_name: skData.sk_file_name,
+          })
+          .eq('election_period_id', targetPeriod)
+          .then();
+      } else {
+        updatedAll.forEach((c) => {
+          supabase
+            .from('committees')
+            .update({
+              sk_number: skData.sk_number,
+              sk_date: skData.sk_date,
+              sk_file_name: skData.sk_file_name,
+            })
+            .eq('id', c.id)
+            .then();
+        });
+      }
+    }
+  },
   getCommittees(periodId?: string): Committee[] {
     const committees = getItem<Committee[]>(STORAGE_KEYS.COMMITTEES, DEFAULT_COMMITTEES);
     if (!periodId) return committees;
@@ -636,7 +717,15 @@ export const db = {
   },
   addCommittee(data: Omit<Committee, 'id'>): Committee {
     const all = this.getCommittees();
-    const newComm: Committee = { ...data, id: `com-${Date.now()}` };
+    const skConfig = this.getSKConfig(data.election_period_id);
+    const newComm: Committee = {
+      ...data,
+      sk_number: data.sk_number || skConfig.sk_number,
+      sk_date: data.sk_date || skConfig.sk_date,
+      sk_file_name: data.sk_file_name || skConfig.sk_file_name,
+      sk_file_data: data.sk_file_data || skConfig.sk_file_data,
+      id: `com-${Date.now()}`,
+    };
     all.push(newComm);
     setItem(STORAGE_KEYS.COMMITTEES, all);
     this.addAuditLog('admin', 'Admin Sekolah', 'ADD_COMMITTEE', `Menambahkan panitia: ${newComm.member_name} (${newComm.role})`);
@@ -905,8 +994,8 @@ export const db = {
     candidateId: string
   ): Promise<{ success: boolean; message: string; voterName?: string }> {
     const activePeriod = this.getActivePeriod();
-    if (!activePeriod) {
-      return { success: false, message: 'Tidak ada periode pemilihan yang sedang berstatus AKTIF.' };
+    if (!activePeriod || activePeriod.status !== 'aktif') {
+      return { success: false, message: 'Pemungutan suara belum dibuka atau periode pemilihan sedang tidak aktif (Draft/Selesai).' };
     }
 
     const allVoters = getItem<Voter[]>(STORAGE_KEYS.VOTERS, []);

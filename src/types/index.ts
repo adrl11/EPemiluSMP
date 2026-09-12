@@ -1,4 +1,5 @@
 export type OrganizationType = 'OSIS' | 'OSIM';
+export type EducationLevel = 'SMP' | 'SMA';
 
 export type ElectionStatus = 'draft' | 'aktif' | 'selesai';
 
@@ -35,7 +36,9 @@ export interface School {
   name: string;
   npsn: string;
   type: OrganizationType;
+  education_level?: EducationLevel;
   logo_url: string;
+  pemda_logo_url?: string;
   address: string;
   principal_name: string;
   principal_nip: string;
@@ -58,10 +61,18 @@ export interface Committee {
   sk_number: string;
   sk_date: string;
   sk_file_name?: string;
+  sk_file_data?: string;
   member_name: string;
   role: 'Ketua Panitia' | 'Sekretaris' | 'Bendahara' | 'Seksi Bilik Suara' | 'Seksi Teknis IT' | 'Anggota';
   email: string;
   status: 'aktif' | 'nonaktif';
+}
+
+export interface CommitteeSKConfig {
+  sk_number: string;
+  sk_date: string;
+  sk_file_name?: string;
+  sk_file_data?: string;
 }
 
 export interface Candidate {
