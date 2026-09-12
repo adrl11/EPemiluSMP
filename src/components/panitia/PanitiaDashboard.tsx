@@ -163,12 +163,16 @@ export const PanitiaDashboard: React.FC<PanitiaDashboardProps> = ({
     realtimeBus.addEventListener('voters_updated', handleUpdate);
     realtimeBus.addEventListener('vote_casted', handleUpdate);
     realtimeBus.addEventListener('data_reset', handleUpdate);
+    realtimeBus.addEventListener('periods_updated', handleUpdate);
+    realtimeBus.addEventListener('supabase_synced', handleUpdate);
 
     return () => {
       realtimeBus.removeEventListener('candidates_updated', handleUpdate);
       realtimeBus.removeEventListener('voters_updated', handleUpdate);
       realtimeBus.removeEventListener('vote_casted', handleUpdate);
       realtimeBus.removeEventListener('data_reset', handleUpdate);
+      realtimeBus.removeEventListener('periods_updated', handleUpdate);
+      realtimeBus.removeEventListener('supabase_synced', handleUpdate);
     };
   }, [currentPeriod?.id]);
 
