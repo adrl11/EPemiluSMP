@@ -6,7 +6,6 @@ import {
   Users,
   ShieldCheck,
   Clock,
-  RotateCcw,
   LogIn,
   LogOut,
   KeyRound,
@@ -95,12 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const handleResetData = () => {
-    if (confirm('Reset ulang data pemilihan ke setelan awal (demo)? Seluruh perubahan transaksi saat ini akan dikembalikan.')) {
-      db.resetToDefault();
-      window.location.reload();
-    }
-  };
+
 
   const isOsim = school.type === 'OSIM';
   const orgTitle = isOsim ? 'E-PILKOSIM DIGITAL' : 'E-PILKETOS DIGITAL';
@@ -150,14 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{timeStr}</span>
           </div>
-          <button
-            onClick={handleResetData}
-            title="Reset Data Demo"
-            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden sm:inline">Reset Demo</span>
-          </button>
+      
         </div>
       </div>
 
