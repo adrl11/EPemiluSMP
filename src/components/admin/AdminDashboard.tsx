@@ -74,30 +74,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [schoolSaveSuccess, setSchoolSaveSuccess] = useState(false);
 
   // Logo upload handlers for school & pemda
-  const handleSchoolLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSchoolLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (typeof event.target?.result === 'string') {
-        setSchoolForm((prev) => ({ ...prev, logo_url: event.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 300, 0.7);
+      setSchoolForm((prev) => ({ ...prev, logo_url: compressed }));
+    } catch (err) {
+      alert((err as Error).message || 'Gagal memproses gambar logo.');
+    }
   };
 
-  const handlePemdaLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePemdaLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (typeof event.target?.result === 'string') {
-        setSchoolForm((prev) => ({ ...prev, pemda_logo_url: event.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 300, 0.7);
+      setSchoolForm((prev) => ({ ...prev, pemda_logo_url: compressed }));
+    } catch (err) {
+      alert((err as Error).message || 'Gagal memproses gambar logo.');
+    }
   };
-
+  
   // Period Modal (Create & Edit)
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<ElectionPeriod | null>(null);
