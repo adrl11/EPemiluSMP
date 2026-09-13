@@ -34,6 +34,7 @@ import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 import { ChangePasswordView } from '../common/ChangePasswordView';
 import { SupabaseSettings } from './SupabaseSettings';
 import { downloadSKDocument } from '../../lib/exportUtils';
+import { compressImageFile } from '../../lib/imageUtils';
 
 interface AdminDashboardProps {
   school: School;
