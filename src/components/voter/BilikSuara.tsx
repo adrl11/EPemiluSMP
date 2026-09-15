@@ -188,7 +188,13 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
               Bilik Suara Elektronik (Kios Digital)
             </span>
             <span className="text-[11px] text-slate-500">
-              {school.name} &bull; {activePeriod?.academic_year}
+              {school.name} &bull; {activePeriod?.academic_year || 'Belum Ada Periode'}
+              {activePeriod?.status === 'draft' && (
+                <span className="ml-1.5 text-amber-600 font-semibold">(Tahap Persiapan)</span>
+              )}
+              {activePeriod?.status === 'selesai' && (
+                <span className="ml-1.5 text-slate-500 font-semibold">(Pemilihan Selesai)</span>
+              )}
             </span>
           </div>
         </div>
@@ -218,99 +224,199 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
       {/* STEP 1: OTENTIKASI SISWA */}
       {currentStep === 'AUTH' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
-            {/* Header Otentikasi */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 sm:p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-inner">
-                <Lock className="w-8 h-8 text-white" />
+          {!activePeriod ? (
+            /* Belum ada periode pemilihan */
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-8 sm:p-12 text-center max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mx-auto mb-4 text-rose-600">
+                <AlertCircle className="w-8 h-8" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-                Bilik Suara Siswa &bull; Masuk Pemilih
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Bilik Suara Belum Dikonfigurasi
               </h2>
-              <p className="text-xs sm:text-sm text-emerald-100 max-w-md mx-auto mt-1">
-                Masukkan Nomor Induk Siswa Nasional (NISN) dan 6-digit Kode Token PIN yang tertera pada kartu suara Anda.
+              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                Belum ada periode pemilihan yang dibuat atau disetel oleh Administrator/Panitia.
+                Bilik suara belum dapat digunakan oleh siswa sampai periode pemilihan dikonfigurasi.
               </p>
-            </div>
-
-            {/* Form Input */}
-            <form onSubmit={handleAuthenticate} className="p-6 sm:p-8 space-y-5">
-              {authError && (
-                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3 animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold block">Peringatan Akses:</span>
-                    <span>{authError}</span>
-                  </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 mb-6 text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-700">Status Bilik Suara:</span>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold">Nonaktif / Belum Ada Periode</span>
                 </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Nomor Induk Siswa Nasional (NISN)
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={10}
-                      value={nisnInput}
-                      onChange={(e) => setNisnInput(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Contoh: 0061234503 (10 digit)"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono text-base tracking-wider text-slate-900 transition-all"
-                      required
-                    />
-                  </div>
-                  <span className="text-[11px] text-slate-400 mt-1 block">
-                    10 digit nomor NISN resmi dari Dapodik/Kemenag
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Kode Token PIN Pemilih (6 Karakter)
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <KeyRound className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={pinInput}
-                      onChange={(e) => setPinInput(e.target.value.toUpperCase())}
-                      placeholder="Contoh: PIL003"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono text-base tracking-widest text-slate-900 uppercase transition-all"
-                      required
-                    />
-                  </div>
-                  <span className="text-[11px] text-slate-400 mt-1 block">
-                    Token rahasia acak sekali pakai yang dibagikan panitia bilik
-                  </span>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-700">Instansi / Sekolah:</span>
+                  <span>{school.name}</span>
                 </div>
               </div>
-
               <button
-                type="submit"
-                disabled={isVerifying}
-                className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                onClick={onExitToPublic}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
               >
-                {isVerifying ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Memvalidasi Data Pemilih...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Verifikasi &amp; Buka Surat Suara</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                Kembali ke Halaman Beranda
               </button>
-            </form>
-          </div>
+            </div>
+          ) : activePeriod.status === 'draft' ? (
+            /* Periode masih berstatus DRAFT / TAHAP PERSIAPAN */
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-8 sm:p-12 text-center max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4 text-amber-600">
+                <Clock className="w-8 h-8" />
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold uppercase tracking-wider mb-3">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                Tahap Persiapan (Draft)
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Pemungutan Suara Belum Dibuka
+              </h2>
+              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                Periode pemilihan saat ini sedang dalam tahap persiapan data (DPT, Paslon, dan Jadwal) oleh Panitia Pemilihan.
+                Bilik suara elektronik akan dibuka secara resmi setelah panitia atau admin mengaktifkan status periode pemilihan.
+              </p>
+              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 text-xs text-slate-700 mb-6 text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">Nama Periode:</span>
+                  <span className="font-bold text-slate-900">{activePeriod.period_name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">Tahun Ajaran:</span>
+                  <span>{activePeriod.academic_year}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">Status Periode:</span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold text-[11px]">Draft / Persiapan</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">Akses Bilik Suara:</span>
+                  <span className="text-rose-600 font-semibold">Terkunci (Belum Dimulai)</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={onExitToPublic}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  Kembali ke Live Quick Count
+                </button>
+              </div>
+            </div>
+          ) : activePeriod.status === 'selesai' ? (
+            /* Periode sudah SELESAI */
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-8 sm:p-12 text-center max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-4 text-slate-600">
+                <Lock className="w-8 h-8" />
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider mb-3">
+                Pemilihan Telah Selesai
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Pemungutan Suara Telah Ditutup
+              </h2>
+              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                Proses pemungutan suara untuk periode <strong>{activePeriod.period_name}</strong> telah resmi ditutup.
+                Siswa tidak dapat lagi mengirimkan suara. Silakan lihat hasil akhir rekapitulasi pada menu Live Quick Count.
+              </p>
+              <button
+                onClick={onExitToPublic}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Lihat Hasil di Live Quick Count
+              </button>
+            </div>
+          ) : (
+            /* Periode AKTIF: Tampilkan Form Otentikasi Siswa */
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+              {/* Header Otentikasi */}
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 sm:p-8 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-inner">
+                  <Lock className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                  Bilik Suara Siswa &bull; Masuk Pemilih
+                </h2>
+                <p className="text-xs sm:text-sm text-emerald-100 max-w-md mx-auto mt-1">
+                  Masukkan Nomor Induk Siswa Nasional (NISN) dan 6-digit Kode Token PIN yang tertera pada kartu suara Anda.
+                </p>
+              </div>
+
+              {/* Form Input */}
+              <form onSubmit={handleAuthenticate} className="p-6 sm:p-8 space-y-5">
+                {authError && (
+                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3 animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold block">Peringatan Akses:</span>
+                      <span>{authError}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Nomor Induk Siswa Nasional (NISN)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={10}
+                        value={nisnInput}
+                        onChange={(e) => setNisnInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Contoh: 0061234503 (10 digit)"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono text-base tracking-wider text-slate-900 transition-all"
+                        required
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      10 digit nomor NISN resmi dari Dapodik/Kemenag
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Kode Token PIN Pemilih (6 Karakter)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <KeyRound className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={pinInput}
+                        onChange={(e) => setPinInput(e.target.value.toUpperCase())}
+                        placeholder="Contoh: PIL003"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono text-base tracking-widest text-slate-900 uppercase transition-all"
+                        required
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      Token rahasia acak sekali pakai yang dibagikan panitia bilik
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isVerifying}
+                  className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isVerifying ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Memvalidasi Data Pemilih...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Verifikasi &amp; Buka Surat Suara</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 

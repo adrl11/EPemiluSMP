@@ -126,10 +126,25 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               onClick={onGoToBilikSuara}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+              className={`px-6 py-3 font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                activePeriod?.status === 'aktif'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/25'
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600/50 shadow-slate-900/30'
+              }`}
             >
-              <Vote className="w-4 h-4 text-slate-950" />
-              <span>Masuk ke Bilik Suara Siswa</span>
+              <Vote className={`w-4 h-4 ${activePeriod?.status === 'aktif' ? 'text-slate-950' : 'text-slate-300'}`} />
+              <span>
+                {activePeriod?.status === 'aktif'
+                  ? 'Masuk ke Bilik Suara Siswa'
+                  : activePeriod?.status === 'draft'
+                  ? 'Bilik Suara (Tahap Persiapan)'
+                  : activePeriod?.status === 'selesai'
+                  ? 'Bilik Suara (Pemilihan Selesai)'
+                  : 'Bilik Suara Siswa (Belum Ada Periode)'}
+              </span>
+              {activePeriod?.status === 'aktif' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-950 animate-ping"></span>
+              )}
             </button>
 
             <div className="flex items-center gap-2 text-xs text-slate-400 px-3 py-2 rounded-lg bg-white/5 border border-white/10">

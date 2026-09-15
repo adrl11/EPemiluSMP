@@ -107,17 +107,46 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Banner Bar */}
       <div className="bg-slate-900 text-slate-200 text-xs px-4 py-1.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30 text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Server Bilik Suara Aktif
-          </span>
+          {activePeriod?.status === 'aktif' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30 text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Bilik Suara: Dibuka (Aktif)
+            </span>
+          ) : activePeriod?.status === 'draft' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30 text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              Bilik Suara: Tahap Persiapan (Ditutup)
+            </span>
+          ) : activePeriod?.status === 'selesai' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-500/20 text-slate-300 font-medium border border-slate-500/30 text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+              Bilik Suara: Pemilihan Selesai
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-medium border border-rose-500/30 text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+              Bilik Suara: Belum Dikonfigurasi
+            </span>
+          )}
           <span className="hidden sm:inline text-slate-400">|</span>
           <span className="hidden sm:inline font-mono text-[11px] text-slate-300">
             NPSN: {school.npsn}
           </span>
           <span className="hidden md:inline text-slate-400">|</span>
           <span className="hidden md:inline text-slate-300">
-            {activePeriod?.period_name || 'Tidak ada periode aktif'}
+            {activePeriod?.period_name ? (
+              <span>
+                {activePeriod.period_name}
+                {activePeriod.status === 'draft' && (
+                  <span className="ml-1.5 text-amber-400 font-normal">(Tahap Persiapan)</span>
+                )}
+                {activePeriod.status === 'selesai' && (
+                  <span className="ml-1.5 text-slate-400 font-normal">(Selesai)</span>
+                )}
+              </span>
+            ) : (
+              'Belum ada periode pemilihan'
+            )}
           </span>
           {authUser && (
             <>
@@ -204,7 +233,24 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Vote className="w-4 h-4" />
                   <span>Bilik Suara Siswa</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  {activePeriod?.status === 'aktif' && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  )}
+                  {activePeriod?.status === 'draft' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 font-semibold">
+                      Persiapan
+                    </span>
+                  )}
+                  {activePeriod?.status === 'selesai' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-medium">
+                      Ditutup
+                    </span>
+                  )}
+                  {!activePeriod && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-700 font-medium">
+                      Belum Ada
+                    </span>
+                  )}
                 </button>
 
                 {/* Gated Login Button */}

@@ -1433,7 +1433,7 @@ export const db = {
       config: getSupabaseConfig(),
     };
   },
-  async syncFromSupabase(): Promise<boolean> {
+  async syncFromSupabase(): Promise<{ success: boolean; message: string; counts?: Record<string, number> }> {
     return syncFromSupabase();
   },
   async testSupabase(): Promise<{ success: boolean; message: string }> {
