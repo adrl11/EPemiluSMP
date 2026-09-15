@@ -14,7 +14,7 @@ interface AppLogoProps {
 }
 
 /**
- * Simbol Vektor 3D E-PILEKTOS DIGITAL (Varian Berwarna Penuh)
+ * Simbol Vektor 3D E-PILKETOS DIGITAL (Varian Berwarna Penuh)
  * Berdasarkan Panduan Identitas Visual Resmi:
  * - Kotak Suara Heksagonal Isometrik 3D
  * - Surat Suara Putih Masuk ke Slot Atas
@@ -33,7 +33,7 @@ export const AppLogoSymbol: React.FC<{ className?: string; size?: number | strin
     return (
       <img
         src="/logo-epilektos.png"
-        alt="Logo E-PILEKTOS DIGITAL"
+        alt="Logo E-PILKETOS DIGITAL"
         className={`object-contain inline-block drop-shadow-xs ${className}`}
         style={style}
         onError={() => setImgError(true)}
@@ -48,7 +48,7 @@ export const AppLogoSymbol: React.FC<{ className?: string; size?: number | strin
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       style={style}
-      aria-label="Logo Simbol E-Pilektos Digital"
+      aria-label="Logo Simbol E-Pilketos Digital"
     >
       <defs>
         {/* Gradasi Hexagon Luar / Sayap Belakang */}
@@ -206,7 +206,7 @@ export const AppLogoSymbol: React.FC<{ className?: string; size?: number | strin
 };
 
 /**
- * Simbol Vektor Monokrom E-PILEKTOS DIGITAL (Untuk Dokumen Cetak & Watermark)
+ * Simbol Vektor Monokrom E-PILKETOS DIGITAL (Untuk Dokumen Cetak & Watermark)
  * Menggunakan gradasi grayscale berpresisi tinggi (hitam, slate, perak, putih)
  * Sangat kontras, elegan, dan profesional saat dicetak hitam-putih.
  */
@@ -221,7 +221,7 @@ export const AppLogoSymbolMonochrome: React.FC<{ className?: string; size?: numb
     return (
       <img
         src="/logo-epilektos.png"
-        alt="Logo Monokrom E-PILEKTOS DIGITAL"
+        alt="Logo Monokrom E-PILKETOS DIGITAL"
         className={`object-contain inline-block filter grayscale contrast-125 brightness-90 ${className}`}
         style={style}
         onError={() => setImgError(true)}
@@ -236,7 +236,7 @@ export const AppLogoSymbolMonochrome: React.FC<{ className?: string; size?: numb
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       style={style}
-      aria-label="Logo Monokrom E-Pilektos Digital"
+      aria-label="Logo Monokrom E-Pilketos Digital"
     >
       <defs>
         <linearGradient id="ep-mono-bg" x1="40" y1="30" x2="200" y2="210" gradientUnits="userSpaceOnUse">
@@ -358,7 +358,7 @@ export const AppLogoSymbolMonochrome: React.FC<{ className?: string; size?: numb
 };
 
 /**
- * Komponen Utama E-PILEKTOS DIGITAL
+ * Komponen Utama E-PILKETOS DIGITAL
  */
 export const AppLogo: React.FC<AppLogoProps> = ({
   variant = 'horizontal',
@@ -406,7 +406,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         {showTagline && (
           <div className="flex flex-col">
             <span className="font-black text-slate-800 tracking-tight text-lg leading-tight">
-              E-PILEKTOS
+              E-PILKETOS
             </span>
             <span className="text-[10px] font-bold tracking-[0.25em] text-slate-500 uppercase">
               DIGITAL
@@ -458,7 +458,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
               inverted ? 'text-white' : 'text-[#111A35]'
             }`}
           >
-            E-PILEKTOS
+            E-PILKETOS
           </span>
           <span
             className={`font-extrabold text-xs sm:text-sm tracking-[0.25em] leading-none ${
@@ -494,7 +494,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
 };
 
 /**
- * 4 Pilar Nilai E-PILEKTOS DIGITAL (Sesuai Referensi Brand Guideline)
+ * 4 Pilar Nilai E-PILKETOS DIGITAL (Sesuai Referensi Brand Guideline)
  */
 export const AppBrandPillars: React.FC<{ className?: string; compact?: boolean }> = ({
   className = '',

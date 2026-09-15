@@ -185,7 +185,7 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-black text-slate-900 leading-tight">
-                E-PILEKTOS DIGITAL
+                E-PILKETOS DIGITAL
               </span>
               <span className="text-[10px] uppercase font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">
                 Bilik Suara

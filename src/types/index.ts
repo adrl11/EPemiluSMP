@@ -37,6 +37,7 @@ export interface School {
   npsn: string;
   type: OrganizationType;
   education_level?: EducationLevel;
+  agency_name?: string; // Instansi Pembina / Dinas Pendidikan / Kemenag / Yayasan
   logo_url: string;
   pemda_logo_url?: string;
   address: string;

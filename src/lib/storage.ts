@@ -39,6 +39,7 @@ const DEFAULT_SCHOOL: School = {
   npsn: '20108842',
   type: 'OSIS',
   education_level: 'SMA',
+  agency_name: 'PEMERINTAH PROVINSI DKI JAKARTA / DINAS PENDIDIKAN',
   logo_url: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80',
   pemda_logo_url: '',
   address: 'Jl. Wijaya Kusuma No. 45, Kebayoran Baru, Jakarta Selatan',

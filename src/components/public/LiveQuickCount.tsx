@@ -161,7 +161,7 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
           {/* Logo Badge Card */}
           <div className="hidden lg:flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shrink-0 text-center shadow-inner">
             <AppLogo variant="icon" size={68} className="mb-3 shadow-lg" />
-            <div className="font-black text-sm tracking-tight text-white">E-PILEKTOS</div>
+            <div className="font-black text-sm tracking-tight text-white">E-PILKETOS</div>
             <div className="text-[10px] font-extrabold tracking-[0.25em] text-blue-400 uppercase">DIGITAL</div>
             <div className="text-[10px] text-slate-400 mt-1 max-w-[130px] leading-tight">Sistem E-Voting Sekolah Terpercaya</div>
           </div>

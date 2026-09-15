@@ -368,11 +368,11 @@ export function downloadSKDocument(
   </div>
 
   <div class="document-page">
-    <!-- Watermark Resmi E-PILEKTOS di tengah dokumen dengan opacity rendah -->
+    <!-- Watermark Resmi E-PILKETOS di tengah dokumen dengan opacity rendah -->
     <div class="watermark-overlay" aria-hidden="true">
       <img
         src="/logo-epilektos.png"
-        alt="Watermark E-PILEKTOS"
+        alt="Watermark E-PILKETOS"
         style="width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) contrast(120%);"
       />
     </div>
@@ -388,7 +388,7 @@ export function downloadSKDocument(
       </div>
       <div class="kop-text">
         <div style="font-size: 11pt; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase;">
-          ${isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN'}
+          ${school.agency_name || (isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN')}
         </div>
         <h3 style="margin: 2px 0; font-size: 16pt; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">
           ${school.name}
@@ -402,7 +402,7 @@ export function downloadSKDocument(
         ${
           school.logo_url
             ? `<img src="${school.logo_url}" alt="Logo Sekolah" class="kop-logo" onerror="this.style.display='none'">`
-            : `<img src="/logo-epilektos.png" alt="Logo E-PILEKTOS DIGITAL" class="kop-logo" style="filter: grayscale(100%) contrast(125%);">`
+            : `<img src="/logo-epilektos.png" alt="Logo E-PILKETOS DIGITAL" class="kop-logo" style="filter: grayscale(100%) contrast(125%);">`
         }
       </div>
     </div>
@@ -505,7 +505,7 @@ export function downloadSKDocument(
       <div class="watermark-overlay" aria-hidden="true">
         <img
           src="/logo-epilektos.png"
-          alt="Watermark E-PILEKTOS"
+          alt="Watermark E-PILKETOS"
           style="width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) contrast(120%);"
         />
       </div>

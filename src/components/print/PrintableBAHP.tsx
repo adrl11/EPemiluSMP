@@ -115,7 +115,7 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
             {/* Teks Identitas Lembaga (Tengah) */}
             <div className="flex-1 text-center">
               <div className="text-xs uppercase font-bold tracking-widest text-slate-700">
-                {isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN'}
+                {school.agency_name || (isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN')}
               </div>
               <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 tracking-wide mt-0.5">
                 {school.name}
@@ -140,9 +140,9 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
               ) : (
                 <img
                   src="/logo-epilektos.png"
-                  alt="Logo E-PILEKTOS DIGITAL"
+                  alt="Logo E-PILKETOS DIGITAL"
                   className="max-h-20 max-w-20 object-contain filter grayscale contrast-125"
-                  title="Logo Resmi E-PILEKTOS DIGITAL"
+                  title="Logo Resmi E-PILKETOS DIGITAL"
                 />
               )}
             </div>
@@ -151,7 +151,7 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
 
         {/* LEMBAR UTAMA BERITA ACARA (DILENGKAPI WATERMARK TENGAH) */}
         <div className="relative">
-          {/* WATERMARK RESMI E-PILEKTOS (Tepat di tengah lembar berita acara) */}
+          {/* WATERMARK RESMI E-PILKETOS (Tepat di tengah lembar berita acara) */}
           {watermarkOpacity > 0 && (
             <div
               className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"

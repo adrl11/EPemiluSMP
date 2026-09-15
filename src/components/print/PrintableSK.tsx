@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { School, ElectionPeriod, Committee, CommitteeSKConfig } from '../../types';
-import { Printer, ArrowLeft, ShieldCheck, Download, Sparkles } from 'lucide-react';
-import { downloadSKDocument } from '../../lib/exportUtils';
+import { Printer, ArrowLeft, ShieldCheck, Sparkles } from 'lucide-react';
 import { AppLogo } from '../common/AppLogo';
 
 interface PrintableSKProps {
@@ -23,10 +22,6 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownload = () => {
-    downloadSKDocument(school, activePeriod, committees, skConfig);
   };
 
   const ketuaPanitia = committees.find((c) => c.role === 'Ketua Panitia');
@@ -91,14 +86,6 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-xs transition-colors cursor-pointer"
-            title="Unduh file dokumen SK"
-          >
-            <Download className="w-4 h-4 text-emerald-600" />
-            <span>Unduh Berkas SK</span>
-          </button>
-          <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
           >
@@ -134,7 +121,7 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
             {/* Teks Identitas Lembaga (Tengah) */}
             <div className="flex-1 text-center">
               <div className="text-xs uppercase font-bold tracking-widest text-slate-700">
-                {isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN'}
+                {school.agency_name || (isOsim ? 'KEMENTERIAN AGAMA REPUBLIK INDONESIA' : 'PEMERINTAH DAERAH / DINAS PENDIDIKAN')}
               </div>
               <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 tracking-wide mt-0.5">
                 {school.name}
@@ -159,9 +146,9 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
               ) : (
                 <img
                   src="/logo-epilektos.png"
-                  alt="Logo E-PILEKTOS DIGITAL"
+                  alt="Logo E-PILKETOS DIGITAL"
                   className="max-h-20 max-w-20 object-contain filter grayscale contrast-125"
-                  title="Logo Resmi E-PILEKTOS DIGITAL"
+                  title="Logo Resmi E-PILKETOS DIGITAL"
                 />
               )}
             </div>
