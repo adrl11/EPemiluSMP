@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { db } from '../../lib/storage';
+import { AppLogo } from './AppLogo';
 
 interface HeaderProps {
   currentRole: UserRole;
@@ -180,30 +181,27 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Nav & Identity */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between py-3 gap-3">
-          {/* Institution Branding */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-blue-100 flex-shrink-0">
-              <Vote className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
-                  {orgTitle}
-                </h1>
-                <span
-                  className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm ${
-                    isOsim
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-blue-100 text-blue-800 border border-blue-300'
-                  }`}
-                >
-                  {school.type}
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 font-medium truncate max-w-xs sm:max-w-md">
-                {school.name} &bull; <span className="text-slate-500">{orgSub}</span>
-              </p>
-            </div>
+          {/* Institution & App Branding */}
+          <div
+            className="flex items-center gap-2 cursor-pointer select-none"
+            onClick={() => onSelectRole('public')}
+            title="Klik untuk kembali ke Beranda Live Quick Count"
+          >
+            <AppLogo
+              variant="horizontal"
+              size={42}
+              schoolName={school.name}
+              tagline={`Sistem Pemilihan ${isOsim ? 'OSIM' : 'OSIS'} Digital`}
+            />
+            <span
+              className={`hidden md:inline-block text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm self-start mt-1 ${
+                isOsim
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : 'bg-blue-100 text-blue-800 border border-blue-300'
+              }`}
+            >
+              {school.type}
+            </span>
           </div>
 
           {/* Navigation Bar */}

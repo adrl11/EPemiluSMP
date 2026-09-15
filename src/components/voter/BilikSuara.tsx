@@ -16,6 +16,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { CandidateDetailModal } from '../public/CandidateDetailModal';
+import { AppLogo } from '../common/AppLogo';
 
 interface BilikSuaraProps {
   school: School;
@@ -179,14 +180,17 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
     <div className="max-w-4xl mx-auto pb-12">
       {/* Kiosk Mode Navigation Bar */}
       <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-slate-200 mb-6 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
-            <Vote className="w-4 h-4" />
-          </div>
+        <div className="flex items-center gap-3">
+          <AppLogo variant="icon" size={32} />
           <div>
-            <span className="text-xs font-bold text-slate-900 block leading-tight">
-              Bilik Suara Elektronik (Kios Digital)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-slate-900 leading-tight">
+                E-PILEKTOS DIGITAL
+              </span>
+              <span className="text-[10px] uppercase font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">
+                Bilik Suara
+              </span>
+            </div>
             <span className="text-[11px] text-slate-500">
               {school.name} &bull; {activePeriod?.academic_year || 'Belum Ada Periode'}
               {activePeriod?.status === 'draft' && (
@@ -325,14 +329,13 @@ export const BilikSuara: React.FC<BilikSuaraProps> = ({
             /* Periode AKTIF: Tampilkan Form Otentikasi Siswa */
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
               {/* Header Otentikasi */}
-              <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 sm:p-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-inner">
-                  <Lock className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+              <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white p-6 sm:p-8 text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+                <AppLogo variant="icon" size={48} className="mx-auto mb-3 shadow-lg" />
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                   Bilik Suara Siswa &bull; Masuk Pemilih
                 </h2>
-                <p className="text-xs sm:text-sm text-emerald-100 max-w-md mx-auto mt-1">
+                <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-1">
                   Masukkan Nomor Induk Siswa Nasional (NISN) dan 6-digit Kode Token PIN yang tertera pada kartu suara Anda.
                 </p>
               </div>

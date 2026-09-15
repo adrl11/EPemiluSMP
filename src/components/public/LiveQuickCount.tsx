@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { CandidateDetailModal } from './CandidateDetailModal';
+import { AppLogo, AppBrandPillars } from '../common/AppLogo';
 
 interface LiveQuickCountProps {
   school: School;
@@ -77,84 +78,99 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl">
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold tracking-wide uppercase">
-              <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span>Papan Rekapitulasi Real-Time &bull; LUBER-JURDIL</span>
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold tracking-wide uppercase">
+                <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Papan Rekapitulasi Real-Time &bull; LUBER-JURDIL</span>
+              </div>
+
+              {activePeriod && (
+                <div
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${
+                    activePeriod.status === 'aktif'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                      : activePeriod.status === 'selesai'
+                      ? 'bg-slate-500/20 text-slate-300 border-slate-400/30'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activePeriod.status === 'aktif'
+                        ? 'bg-emerald-400 animate-pulse'
+                        : activePeriod.status === 'selesai'
+                        ? 'bg-slate-400'
+                        : 'bg-amber-400'
+                    }`}
+                  />
+                  <span>
+                    {activePeriod.status === 'aktif'
+                      ? 'Pemungutan Suara Aktif'
+                      : activePeriod.status === 'selesai'
+                      ? 'Pemilihan Ditutup (Selesai)'
+                      : 'Tahap Persiapan (Draft)'}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {activePeriod && (
-              <div
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase border ${
-                  activePeriod.status === 'aktif'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                    : activePeriod.status === 'selesai'
-                    ? 'bg-slate-500/20 text-slate-300 border-slate-400/30'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              {activePeriod?.period_name || 'Pemilihan Ketua OSIS / OSIM'}
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-slate-300 font-normal max-w-2xl leading-relaxed">
+              Selamat datang di portal pemilihan resmi {school.name}. Gunakan hak suara Anda di bilik suara digital
+              menggunakan NISN dan kode PIN rahasia Anda.
+            </p>
+
+            {/* Action Row */}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                onClick={onGoToBilikSuara}
+                className={`px-6 py-3 font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  activePeriod?.status === 'aktif'
+                    ? 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/25'
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600/50 shadow-slate-900/30'
                 }`}
               >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    activePeriod.status === 'aktif'
-                      ? 'bg-emerald-400 animate-pulse'
-                      : activePeriod.status === 'selesai'
-                      ? 'bg-slate-400'
-                      : 'bg-amber-400'
-                  }`}
-                />
+                <Vote className={`w-4 h-4 ${activePeriod?.status === 'aktif' ? 'text-slate-950' : 'text-slate-300'}`} />
                 <span>
-                  {activePeriod.status === 'aktif'
-                    ? 'Pemungutan Suara Aktif'
-                    : activePeriod.status === 'selesai'
-                    ? 'Pemilihan Ditutup (Selesai)'
-                    : 'Tahap Persiapan (Draft)'}
+                  {activePeriod?.status === 'aktif'
+                    ? 'Masuk ke Bilik Suara Siswa'
+                    : activePeriod?.status === 'draft'
+                    ? 'Bilik Suara (Tahap Persiapan)'
+                    : activePeriod?.status === 'selesai'
+                    ? 'Bilik Suara (Pemilihan Selesai)'
+                    : 'Bilik Suara Siswa (Belum Ada Periode)'}
+                </span>
+                {activePeriod?.status === 'aktif' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-950 animate-ping"></span>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2 text-xs text-slate-400 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                <Clock3 className="w-3.5 h-3.5 text-slate-300" />
+                <span>
+                  Pembaruan Terakhir: {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
                 </span>
               </div>
-            )}
-          </div>
-
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            {activePeriod?.period_name || 'Pemilihan Ketua OSIS / OSIM'}
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-slate-300 font-normal max-w-2xl leading-relaxed">
-            Selamat datang di portal pemilihan resmi {school.name}. Gunakan hak suara Anda di bilik suara digital
-            menggunakan NISN dan kode PIN rahasia Anda.
-          </p>
-
-          {/* Action Row */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              onClick={onGoToBilikSuara}
-              className={`px-6 py-3 font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                activePeriod?.status === 'aktif'
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/25'
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600/50 shadow-slate-900/30'
-              }`}
-            >
-              <Vote className={`w-4 h-4 ${activePeriod?.status === 'aktif' ? 'text-slate-950' : 'text-slate-300'}`} />
-              <span>
-                {activePeriod?.status === 'aktif'
-                  ? 'Masuk ke Bilik Suara Siswa'
-                  : activePeriod?.status === 'draft'
-                  ? 'Bilik Suara (Tahap Persiapan)'
-                  : activePeriod?.status === 'selesai'
-                  ? 'Bilik Suara (Pemilihan Selesai)'
-                  : 'Bilik Suara Siswa (Belum Ada Periode)'}
-              </span>
-              {activePeriod?.status === 'aktif' && (
-                <span className="w-2 h-2 rounded-full bg-emerald-950 animate-ping"></span>
-              )}
-            </button>
-
-            <div className="flex items-center gap-2 text-xs text-slate-400 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
-              <Clock3 className="w-3.5 h-3.5 text-slate-300" />
-              <span>
-                Pembaruan Terakhir: {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} WIB
-              </span>
             </div>
           </div>
+
+          {/* Logo Badge Card */}
+          <div className="hidden lg:flex flex-col items-center justify-center p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shrink-0 text-center shadow-inner">
+            <AppLogo variant="icon" size={68} className="mb-3 shadow-lg" />
+            <div className="font-black text-sm tracking-tight text-white">E-PILEKTOS</div>
+            <div className="text-[10px] font-extrabold tracking-[0.25em] text-blue-400 uppercase">DIGITAL</div>
+            <div className="text-[10px] text-slate-400 mt-1 max-w-[130px] leading-tight">Sistem E-Voting Sekolah Terpercaya</div>
+          </div>
         </div>
+      </section>
+
+      {/* 4 Pilar Kredibilitas Sistem (Sesuai Pedoman Merek Resmi) */}
+      <section>
+        <AppBrandPillars />
       </section>
 
       {/* Metrik Partisipasi DPT Cards */}

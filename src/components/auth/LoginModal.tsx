@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthUser, School } from '../../types';
 import { db } from '../../lib/storage';
+import { AppLogo } from '../common/AppLogo';
 import {
   Lock,
   Mail,
@@ -175,9 +176,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold border border-blue-400/30 uppercase mb-2">
-            <Lock className="w-3 h-3 text-blue-400" />
-            <span>Akses Terbatas Petugas</span>
+          <div className="flex items-center justify-between mb-3">
+            <AppLogo variant="icon" size={38} className="shadow-md" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold border border-blue-400/30 uppercase">
+              <Lock className="w-3 h-3 text-blue-400" />
+              <span>Akses Terbatas</span>
+            </div>
           </div>
 
           <h2 className="text-xl font-black tracking-tight text-white">

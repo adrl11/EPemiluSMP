@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { School, ElectionPeriod, Candidate, QuickCountStat, ElectionMetrics, Committee } from '../../types';
-import { Printer, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Printer, ArrowLeft, ShieldCheck, Sparkles } from 'lucide-react';
 import { db } from '../../lib/storage';
+import { AppLogo } from '../common/AppLogo';
 
 interface PrintableBAHPProps {
   school: School;
@@ -21,6 +22,8 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
   committees,
   onBack,
 }) => {
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.15); // 15% default jernih & elegan
+
   const handlePrint = () => {
     window.print();
   };
@@ -42,19 +45,40 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
   return (
     <div className="bg-slate-100 min-h-screen p-4 sm:p-8 print:p-0 print:bg-white text-slate-900">
       {/* Control Bar (Hidden on Print) */}
-      <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Panel Admin</span>
         </button>
 
+        {/* Pengatur Kepekatan Watermark Monokrom */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span className="text-slate-600 font-semibold text-[11px]">Watermark:</span>
+          {[
+            { label: 'Lembut (8%)', val: 0.08 },
+            { label: 'Jelas (15%)', val: 0.15 },
+            { label: 'Tegas (22%)', val: 0.22 },
+            { label: 'Off', val: 0 },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              onClick={() => setWatermarkOpacity(opt.val)}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                watermarkOpacity === opt.val
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 hidden sm:inline">
-            Format Resmi Siap Cetak / Unduh PDF
-          </span>
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
@@ -66,8 +90,10 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
       </div>
 
       {/* Official Document Sheet */}
-      <div className="max-w-4xl mx-auto bg-white p-8 sm:p-14 rounded-2xl shadow-xl print:shadow-none print:p-0 border border-slate-200 print:border-none">
-        {/* Kop Surat Institusi Resmi */}
+      <div className="max-w-4xl mx-auto bg-white p-8 sm:p-14 rounded-2xl shadow-xl print:shadow-none print:p-0 border border-slate-200 print:border-none relative overflow-hidden">
+        {/* Konten Dokumen Resmi */}
+        <div className="relative z-10">
+          {/* Kop Surat Institusi Resmi */}
         <div className="border-b-4 border-double border-slate-900 pb-4 mb-6">
           <div className="flex items-center justify-between gap-4">
             {/* Logo Pemda (Kiri) */}
@@ -102,7 +128,7 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
               </p>
             </div>
 
-            {/* Logo Sekolah (Kanan) */}
+            {/* Logo Sekolah / Penyelenggara (Kanan) */}
             <div className="w-20 h-20 shrink-0 flex items-center justify-center">
               {school.logo_url ? (
                 <img
@@ -112,13 +138,33 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
                   className="max-h-20 max-w-20 object-contain"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 print:hidden flex items-center justify-center text-[10px] text-slate-400 text-center font-medium">
-                  Logo Sekolah
-                </div>
+                <img
+                  src="/logo-epilektos.png"
+                  alt="Logo E-PILEKTOS DIGITAL"
+                  className="max-h-20 max-w-20 object-contain filter grayscale contrast-125"
+                  title="Logo Resmi E-PILEKTOS DIGITAL"
+                />
               )}
             </div>
           </div>
         </div>
+
+        {/* LEMBAR UTAMA BERITA ACARA (DILENGKAPI WATERMARK TENGAH) */}
+        <div className="relative">
+          {/* WATERMARK RESMI E-PILEKTOS (Tepat di tengah lembar berita acara) */}
+          {watermarkOpacity > 0 && (
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+              aria-hidden="true"
+              style={{ opacity: watermarkOpacity }}
+            >
+              <div className="w-[420px] h-[420px] flex items-center justify-center transform -rotate-12">
+                <AppLogo variant="watermark" size={420} className="w-full h-full" />
+              </div>
+            </div>
+          )}
+
+          <div className="relative z-10">
 
         {/* Document Header */}
         <div className="text-center my-6">
@@ -284,6 +330,9 @@ export const PrintableBAHP: React.FC<PrintableBAHPProps> = ({
             <p className="font-bold underline text-slate-900">{school.principal_name}</p>
             <p className="text-slate-500 font-mono">NIP. {school.principal_nip}</p>
           </div>
+        </div>
+        </div>
+        </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { School, ElectionPeriod, Committee, CommitteeSKConfig } from '../../types';
-import { Printer, ArrowLeft, ShieldCheck, Download } from 'lucide-react';
+import { Printer, ArrowLeft, ShieldCheck, Download, Sparkles } from 'lucide-react';
 import { downloadSKDocument } from '../../lib/exportUtils';
+import { AppLogo } from '../common/AppLogo';
 
 interface PrintableSKProps {
   school: School;
@@ -18,6 +19,8 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
   skConfig,
   onBack,
 }) => {
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.15); // 15% default jernih & elegan
+
   const handlePrint = () => {
     window.print();
   };
@@ -62,10 +65,31 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
           <span>Kembali ke Panel Admin</span>
         </button>
 
+        {/* Pengatur Kepekatan Watermark Monokrom */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span className="text-slate-600 font-semibold text-[11px]">Watermark:</span>
+          {[
+            { label: 'Lembut (8%)', val: 0.08 },
+            { label: 'Jelas (15%)', val: 0.15 },
+            { label: 'Tegas (22%)', val: 0.22 },
+            { label: 'Off', val: 0 },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              onClick={() => setWatermarkOpacity(opt.val)}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
+                watermarkOpacity === opt.val
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-500 hidden md:inline">
-            Format Resmi Siap Cetak / PDF
-          </span>
           <button
             onClick={handleDownload}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-xs transition-colors cursor-pointer"
@@ -85,8 +109,10 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
       </div>
 
       {/* Official Document Sheet */}
-      <div className="max-w-4xl mx-auto bg-white p-8 sm:p-14 rounded-2xl shadow-xl print:shadow-none print:p-0 border border-slate-200 print:border-none">
-        {/* Kop Surat Institusi Resmi (Sesuai Gaya BAHP) */}
+      <div className="max-w-4xl mx-auto bg-white p-8 sm:p-14 rounded-2xl shadow-xl print:shadow-none print:p-0 border border-slate-200 print:border-none relative overflow-hidden">
+        {/* Konten Dokumen SK */}
+        <div className="relative z-10">
+          {/* Kop Surat Institusi Resmi (Sesuai Gaya BAHP) */}
         <div className="border-b-4 border-double border-slate-900 pb-4 mb-6">
           <div className="flex items-center justify-between gap-4">
             {/* Logo Pemda (Kiri) */}
@@ -121,7 +147,7 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
               </p>
             </div>
 
-            {/* Logo Sekolah (Kanan) */}
+            {/* Logo Sekolah / Penyelenggara (Kanan) */}
             <div className="w-20 h-20 shrink-0 flex items-center justify-center">
               {school.logo_url ? (
                 <img
@@ -131,13 +157,33 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
                   className="max-h-20 max-w-20 object-contain"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 print:hidden flex items-center justify-center text-[10px] text-slate-400 text-center font-medium">
-                  Logo Sekolah
-                </div>
+                <img
+                  src="/logo-epilektos.png"
+                  alt="Logo E-PILEKTOS DIGITAL"
+                  className="max-h-20 max-w-20 object-contain filter grayscale contrast-125"
+                  title="Logo Resmi E-PILEKTOS DIGITAL"
+                />
               )}
             </div>
           </div>
         </div>
+
+        {/* SECTION 1: LEMBAR KEPUTUSAN UTAMA (DILENGKAPI WATERMARK RESMI TENGAH) */}
+        <div className="relative">
+          {/* WATERMARK RESMI LEMBAR 1 (Tepat di tengah area teks keputusan) */}
+          {watermarkOpacity > 0 && (
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+              aria-hidden="true"
+              style={{ opacity: watermarkOpacity }}
+            >
+              <div className="w-[420px] h-[420px] flex items-center justify-center transform -rotate-12">
+                <AppLogo variant="watermark" size={420} className="w-full h-full" />
+              </div>
+            </div>
+          )}
+
+          <div className="relative z-10">
 
         {/* Judul Surat Keputusan */}
         <div className="text-center my-6">
@@ -255,14 +301,31 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
           </div>
         </div>
 
-        {/* LAMPIRAN SUSUNAN PANITIA (Format Resmi Sesuai BAHP) */}
-        <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-300 print:break-before-page print:border-none print:pt-4">
-          <div className="mb-4 text-xs font-mono text-slate-700">
-            <p><strong>LAMPIRAN SURAT KEPUTUSAN KEPALA {schoolTypeUpper}</strong></p>
-            <p>Nomor: {skConfig.sk_number}</p>
-            <p>Tanggal: {formattedDate}</p>
-            <p>Tentang: Susunan Panitia Pelaksana Pemilihan {orgShort} Masa Bakti {academicYear}</p>
-          </div>
+        </div>
+        </div>
+
+        {/* SECTION 2: LAMPIRAN SUSUNAN PANITIA (Format Resmi Sesuai BAHP - Dilengkapi Watermark Lembar 2) */}
+        <div className="relative mt-12 pt-8 border-t-2 border-dashed border-slate-300 print:break-before-page print:border-none print:pt-4">
+          {/* WATERMARK RESMI LEMBAR 2 (Tepat di tengah tabel lampiran panitia) */}
+          {watermarkOpacity > 0 && (
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+              aria-hidden="true"
+              style={{ opacity: watermarkOpacity }}
+            >
+              <div className="w-[380px] h-[380px] flex items-center justify-center transform -rotate-12">
+                <AppLogo variant="watermark" size={380} className="w-full h-full" />
+              </div>
+            </div>
+          )}
+
+          <div className="relative z-10">
+            <div className="mb-4 text-xs font-mono text-slate-700">
+              <p><strong>LAMPIRAN SURAT KEPUTUSAN KEPALA {schoolTypeUpper}</strong></p>
+              <p>Nomor: {skConfig.sk_number}</p>
+              <p>Tanggal: {formattedDate}</p>
+              <p>Tentang: Susunan Panitia Pelaksana Pemilihan {orgShort} Masa Bakti {academicYear}</p>
+            </div>
 
           <h3 className="text-xs sm:text-sm font-bold uppercase text-slate-900 border-b border-slate-300 pb-1 mb-3 text-center">
             SUSUNAN PERSONALIA PANITIA PELAKSANA PEMILIHAN
@@ -334,6 +397,7 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
             </div>
           </div>
         </div>
+        </div>
 
         {/* Security Stamp Footer (Sesuai Gaya BAHP) */}
         <div className="mt-12 pt-4 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-600">
@@ -342,6 +406,7 @@ export const PrintableSK: React.FC<PrintableSKProps> = ({
             <span>Dokumen Keputusan Resmi Sah &bull; Sistem E-Pilketos &amp; E-Pilkosim Digital</span>
           </div>
           <span className="font-mono">ID Validasi: SK-{skConfig.sk_date.replace(/-/g, '')}-{school.npsn}</span>
+        </div>
         </div>
       </div>
     </div>

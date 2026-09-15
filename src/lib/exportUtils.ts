@@ -186,6 +186,28 @@ export function downloadSKDocument(
       padding: 25mm 20mm;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+    .watermark-overlay {
+      position: absolute;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-12deg);
+      width: 420px;
+      height: 420px;
+      opacity: 0.14;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+    .watermark-overlay svg {
+      width: 100%;
+      height: 100%;
+    }
+    .doc-inner-content {
+      position: relative;
+      z-index: 1;
     }
     .no-print-toolbar {
       position: sticky;
@@ -346,7 +368,16 @@ export function downloadSKDocument(
   </div>
 
   <div class="document-page">
-    <!-- Kop Surat Resmi (Sesuai Gaya BAHP) -->
+    <!-- Watermark Resmi E-PILEKTOS di tengah dokumen dengan opacity rendah -->
+    <div class="watermark-overlay" aria-hidden="true">
+      <img
+        src="/logo-epilektos.png"
+        alt="Watermark E-PILEKTOS"
+        style="width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) contrast(120%);"
+      />
+    </div>
+    <div class="doc-inner-content">
+      <!-- Kop Surat Resmi (Sesuai Gaya BAHP) -->
     <div class="kop-header">
       <div style="width: 75px; height: 75px; display: flex; align-items: center; justify-content: center;">
         ${
@@ -371,7 +402,7 @@ export function downloadSKDocument(
         ${
           school.logo_url
             ? `<img src="${school.logo_url}" alt="Logo Sekolah" class="kop-logo" onerror="this.style.display='none'">`
-            : `<div style="width: 60px; height: 60px; border: 1px dashed #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #94a3b8;">Logo Sekolah</div>`
+            : `<img src="/logo-epilektos.png" alt="Logo E-PILEKTOS DIGITAL" class="kop-logo" style="filter: grayscale(100%) contrast(125%);">`
         }
       </div>
     </div>
@@ -469,14 +500,22 @@ export function downloadSKDocument(
       </div>
     </div>
 
-    <!-- LAMPIRAN SUSUNAN PANITIA -->
-    <div class="page-break">
-      <div style="font-size: 11pt; margin-bottom: 16px;">
-        <strong>LAMPIRAN KEPUTUSAN KEPALA ${schoolTypeUpper}</strong><br>
-        Nomor: ${skConfig.sk_number}<br>
-        Tanggal: ${formattedDate}<br>
-        Tentang: Susunan Panitia Pelaksana ${periodName}
+    <!-- LAMPIRAN SUSUNAN PANITIA (Lembar 2) -->
+    <div class="page-break" style="position: relative; overflow: hidden; min-height: 297mm; padding-top: 20px;">
+      <div class="watermark-overlay" aria-hidden="true">
+        <img
+          src="/logo-epilektos.png"
+          alt="Watermark E-PILEKTOS"
+          style="width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) contrast(120%);"
+        />
       </div>
+      <div style="position: relative; z-index: 1;">
+        <div style="font-size: 11pt; margin-bottom: 16px;">
+          <strong>LAMPIRAN KEPUTUSAN KEPALA ${schoolTypeUpper}</strong><br>
+          Nomor: ${skConfig.sk_number}<br>
+          Tanggal: ${formattedDate}<br>
+          Tentang: Susunan Panitia Pelaksana ${periodName}
+        </div>
 
       <h4 style="text-align: center; margin: 10px 0 16px 0; text-transform: uppercase; text-decoration: underline;">
         SUSUNAN PERSONALIA PANITIA PELAKSANA PEMILIHAN
@@ -505,6 +544,8 @@ export function downloadSKDocument(
           <p style="margin: 0;">NIP. ${school.principal_nip}</p>
         </div>
       </div>
+      </div>
+    </div>
     </div>
   </div>
 </body>
