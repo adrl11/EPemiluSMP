@@ -12,8 +12,10 @@ import {
   Shield,
   Activity,
   Sparkles,
+  Maximize2,
 } from 'lucide-react';
 import { CandidateDetailModal } from './CandidateDetailModal';
+import { SmartboardQuickCountModal } from './SmartboardQuickCountModal';
 import { AppLogo, AppBrandPillars } from '../common/AppLogo';
 
 interface LiveQuickCountProps {
@@ -38,6 +40,7 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<'bar' | 'donut'>('bar');
+  const [isSmartboardOpen, setIsSmartboardOpen] = useState(false);
 
   const refreshData = () => {
     if (!activePeriod) return;
@@ -533,6 +536,24 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
             </div>
           </div>
         )}
+
+        {/* Footer Diagram: Status Real-Time & Tombol Zoom Smartboard di Kanan Bawah */}
+        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Pembaruan otomatis real-time &bull; Terhubung langsung dengan bilik suara</span>
+          </div>
+
+          <button
+            id="btn-zoom-smartboard"
+            onClick={() => setIsSmartboardOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ml-auto sm:ml-0"
+            title="Buka tampilan diagram ukuran besar untuk Smartboard atau Proyektor Sekolah"
+          >
+            <Maximize2 className="w-4 h-4 text-blue-100" />
+            <span>Tampilkan di Smartboard / Proyektor</span>
+          </button>
+        </div>
       </section>
 
       {/* Profil Pasangan Calon (Kandidat Cards) */}
@@ -667,6 +688,19 @@ export const LiveQuickCount: React.FC<LiveQuickCountProps> = ({
       <CandidateDetailModal
         candidate={selectedCandidate}
         onClose={() => setSelectedCandidate(null)}
+      />
+
+      {/* Modal Tampilan Layar Penuh Smartboard / Proyektor Aula */}
+      <SmartboardQuickCountModal
+        isOpen={isSmartboardOpen}
+        onClose={() => setIsSmartboardOpen(false)}
+        school={school}
+        activePeriod={activePeriod}
+        candidates={candidates}
+        stats={stats}
+        metrics={metrics}
+        lastUpdated={lastUpdated}
+        leadingCandidate={leadingCandidate}
       />
     </div>
   );
