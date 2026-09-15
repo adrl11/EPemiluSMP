@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+body {
+  background-color: #f1f5f9;
+}
+
 @media print {
   body {
     background-color: #ffffff !important;
