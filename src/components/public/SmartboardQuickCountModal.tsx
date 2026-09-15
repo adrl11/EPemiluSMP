@@ -335,30 +335,36 @@ export const SmartboardQuickCountModal: React.FC<SmartboardQuickCountModalProps>
                           {/* Foto Paslon & Badge Nomor Urut */}
                           <div className="relative mb-2.5">
                             <img
-                              src={candidateDetail?.photo_url || cand.photo_url}
+                              src={candidateDetail?.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
                               alt={cand.chairman_name}
                               referrerPolicy="no-referrer"
                               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-700 shadow-xl group-hover:scale-105 transition-transform"
                             />
                             <div
-                              className="absolute -top-2 -right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-xl font-black text-xs sm:text-sm text-white flex items-center justify-center shadow-lg border-2 border-slate-900"
+                              className="absolute -top-2 -right-2 min-w-7 h-7 sm:min-w-8 sm:h-8 px-1.5 rounded-xl font-black text-xs sm:text-sm text-white flex items-center justify-center shadow-lg border-2 border-slate-900"
                               style={{ backgroundColor: cand.color || '#3b82f6' }}
                             >
-                              {String(cand.candidate_order).padStart(2, '0')}
+                              {String(cand.ballot_number || candidateDetail?.ballot_number || 1).padStart(2, '0')}
                             </div>
                           </div>
 
                           <div className="font-extrabold text-xs sm:text-base text-white line-clamp-1">
                             {cand.chairman_name}
                           </div>
-                          {candidateDetail?.vice_chairman_name && (
+                          {(cand.vice_chairman_name || candidateDetail?.vice_chairman_name) && (
                             <div className="text-[11px] sm:text-xs text-slate-300 line-clamp-1 font-medium">
-                              &amp; {candidateDetail.vice_chairman_name}
+                              &amp; {cand.vice_chairman_name || candidateDetail?.vice_chairman_name}
                             </div>
                           )}
-                          <div className="text-[10px] sm:text-xs text-blue-400 font-bold mt-0.5">
-                            {candidateDetail?.class_name || 'Kandidat'}
-                          </div>
+                          {(candidateDetail?.chairman_class || candidateDetail?.vice_chairman_class) ? (
+                            <div className="text-[10px] sm:text-xs text-blue-400 font-bold mt-0.5">
+                              {candidateDetail.chairman_class} {candidateDetail.vice_chairman_class && `& ${candidateDetail.vice_chairman_class}`}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] sm:text-xs text-blue-400 font-bold mt-0.5">
+                              Paslon No. {String(cand.ballot_number || candidateDetail?.ballot_number || 1).padStart(2, '0')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -432,7 +438,7 @@ export const SmartboardQuickCountModal: React.FC<SmartboardQuickCountModalProps>
                           className="w-12 h-12 rounded-xl text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md"
                           style={{ backgroundColor: cand.color }}
                         >
-                          {String(cand.candidate_order).padStart(2, '0')}
+                          {String(cand.ballot_number || candidateDetail?.ballot_number || 1).padStart(2, '0')}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
